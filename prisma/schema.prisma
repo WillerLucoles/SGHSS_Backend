@@ -23,7 +23,3 @@ model Paciente {
   historicoClinico String?
 }
 
-model Teste {
-  id   Int    @id @default(autoincrement())
-  nome String
-}
