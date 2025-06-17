@@ -3,7 +3,6 @@ const express = require('express');
 const router = express.Router();
 const consultaController = require('../controllers/consultaController');
 
-
 router.get('/', consultaController.listarTodos);
 router.get('/:id', consultaController.buscarPorId);
 router.post('/', consultaController.criar);
