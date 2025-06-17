@@ -21,5 +21,28 @@ model Paciente {
   endereco       String
   contato        String
   historicoClinico String?
+
+  Consulta Consulta[]
+}
+
+model ProfissionalDeSaude {
+  id                      Int         @id @default(autoincrement())
+  nome                    String
+  cpf                     String      @unique
+  especialidade           String
+  contato                 String
+  consultas               Consulta[]
+}
+
+
+model Consulta {
+  id              Int      @id @default(autoincrement())
+  dataConsulta    DateTime
+  horario         String
+  status          String
+  pacienteId      Int
+  profissionalId  Int
+  paciente        Paciente           @relation(fields: [pacienteId], references: [id])
+  profissional    ProfissionalDeSaude @relation(fields: [profissionalId], references: [id])
 }
 
