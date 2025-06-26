@@ -8,5 +8,5 @@ const criarConsultaSchema = z.object({
   profissionalId: z.number().int().positive()
 });
 
-const atualizarConsultaSchema = criarConsultaSchema.partial(); // tudo opcional
+const atualizarConsultaSchema = criarConsultaSchema.partial();
 module.exports = { criarConsultaSchema, atualizarConsultaSchema };

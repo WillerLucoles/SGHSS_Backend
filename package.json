@@ -16,7 +16,13 @@
   "description": "O SGHSS é um sistema completo de gestão hospitalar desenvolvido em Node.js, projetado para facilitar o gerenciamento de pacientes, profissionais de saúde, consultas e prontuários médicos.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon src/app.js",
+    "start": "node src/app.js",
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate dev --name init",
+    "prisma:studio": "npx prisma studio",
+    "prisma": "npm run prisma:generate && npm run prisma:migrate"
   },
   "repository": {
     "type": "git",
@@ -29,5 +35,8 @@
   "bugs": {
     "url": "https://github.com/WillerLucoles/SGHSS_Backend/issues"
   },
-  "homepage": "https://github.com/WillerLucoles/SGHSS_Backend#readme"
+  "homepage": "https://github.com/WillerLucoles/SGHSS_Backend#readme",
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
 }
