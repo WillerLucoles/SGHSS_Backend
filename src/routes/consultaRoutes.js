@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const consultaController = require('../controllers/consultaController');
+const validate = require('../middlewares/validate');
 const { criarConsultaSchema, atualizarConsultaSchema } = require('../validators/consultaValidator');
 
 

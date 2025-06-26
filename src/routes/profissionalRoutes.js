@@ -2,7 +2,9 @@
 const express = require('express');
 const router = express.Router();
 const profissionalController = require('../controllers/profissionalController');
+const validate = require('../middlewares/validate');
 const { criarProfissionalSchema, atualizarProfissionalSchema } = require('../validators/profissionalValidator');
+
 
 
 
