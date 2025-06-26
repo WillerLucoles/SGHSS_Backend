@@ -1,0 +1,12 @@
+const { z } = require('zod');
+
+const criarConsultaSchema = z.object({
+  dataConsulta: z.string().refine(v => !isNaN(Date.parse(v)), { message: 'Data inválida' }),
+  horario: z.string().regex(/^\d{2}:\d{2}$/, { message: 'Formato HH:MM' }),
+  status: z.enum(['agendada','cancelada','concluída']),
+  pacienteId: z.number().int().positive(),
+  profissionalId: z.number().int().positive()
+});
+
+const atualizarConsultaSchema = criarConsultaSchema.partial(); // tudo opcional
+module.exports = { criarConsultaSchema, atualizarConsultaSchema };
