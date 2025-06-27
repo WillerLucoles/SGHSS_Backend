@@ -1,50 +1,58 @@
-// src/controllers/profissionalController.js
 const profissionalService = require('../services/profissionalService');
+const AppError = require('../utils/AppError');
 
 const profissionalController = {
-  listarTodos: async (req, res) => {
+  listarTodos: async (req, res, next) => {
     try {
-      const profissionais = await profissionalService.listarTodos();
-      res.json({ profissionais });
-    } catch (error) {
-      res.status(500).json({ error: 'Erro ao listar profissionais' });
+      const list = await profissionalService.listarTodos();
+      res.json({ profissionais: list });
+    } catch (err) {
+      next(err);
     }
   },
 
-  buscarPorId: async (req, res) => {
+  buscarPorId: async (req, res, next) => {
     try {
-      const profissional = await profissionalService.buscarPorId(req.params.id);
-      if (!profissional) return res.status(404).json({ error: 'Profissional não encontrado' });
-      res.json(profissional);
-    } catch (error) {
-      res.status(500).json({ error: 'Erro ao buscar profissional' });
+      const prof = await profissionalService.buscarPorId(req.params.id);
+      if (!prof) throw new AppError(404, 'Profissional não encontrado');
+      res.json(prof);
+    } catch (err) {
+      next(err);
     }
   },
 
-  criar: async (req, res) => {
+  criar: async (req, res, next) => {
     try {
-      const novo = await profissionalService.criar(req.body);
+      const dados = req.body;
+      const novo = await profissionalService.criar(dados);
       res.status(201).json(novo);
-    } catch (error) {
-      res.status(500).json({ error: 'Erro ao criar profissional' });
+    } catch (err) {
+      if (err.code === 'P2002' && err.meta.target.includes('cpf')) {
+        return next(new AppError(409, 'CPF de profissional já cadastrado'));
+      }
+      next(err);
     }
   },
 
-  atualizar: async (req, res) => {
+  atualizar: async (req, res, next) => {
     try {
       const atualizado = await profissionalService.atualizar(req.params.id, req.body);
+      if (!atualizado) throw new AppError(404, 'Profissional não encontrado para atualização');
       res.json(atualizado);
-    } catch (error) {
-      res.status(500).json({ error: 'Erro ao atualizar profissional' });
+    } catch (err) {
+      next(err);
     }
   },
 
-  deletar: async (req, res) => {
+  deletar: async (req, res, next) => {
     try {
       await profissionalService.deletar(req.params.id);
       res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ error: 'Erro ao deletar profissional' });
+    } catch (err) {
+      if (err.code === 'P2025') {
+        return next(new AppError(404, 'Profissional não encontrado para exclusão'));
+      }
+      next(err);
     }
   }
 };

@@ -1,57 +1,64 @@
-// src/controllers/pacienteController.js
 const pacienteService = require('../services/pacienteService');
+const AppError = require('../utils/AppError');
 
 const pacienteController = {
-  listarTodos: async (req, res) => {
+  listarTodos: async (req, res, next) => {
     try {
       const pacientes = await pacienteService.listarTodos();
-      res.json(pacientes);
-    } catch (error) {
-      res.status(500).json({ error: 'Erro ao listar pacientes' });
+      res.json({ pacientes });
+    } catch (err) {
+      next(err);
     }
   },
 
-  buscarPorId: async (req, res) => {
-      try {
-        const idRecebido = req.params.id;
-        console.log("Rota '/:id' acionada com id:", idRecebido);
-        const paciente = await pacienteService.buscarPorId(idRecebido);
-        if (!paciente) {
-          console.log(`Paciente não encontrado para o id: ${idRecebido}`);
-          return res.status(404).json({ error: 'Paciente não encontrado' });
-        }
-        res.json(paciente);
-      } catch (error) {
-        console.error("Erro no controller:", error);
-        res.status(500).json({ error: 'Erro ao buscar paciente' });
+  buscarPorId: async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const paciente = await pacienteService.buscarPorId(id);
+      if (!paciente) throw new AppError(404, 'Paciente não encontrado');
+      res.json(paciente);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  criar: async (req, res, next) => {
+    try {
+      const dados = req.body;
+      const novo = await pacienteService.criar(dados);
+      res.status(201).json(novo);
+    } catch (err) {
+      // Prisma unique constraint violation (CPF)
+      if (err.code === 'P2002' && err.meta.target.includes('cpf')) {
+        return next(new AppError(409, 'CPF já cadastrado'));
       }
-    },
-
-
-  criar: async (req, res) => {
-    try {
-      const novoPaciente = await pacienteService.criar(req.body);
-      res.status(201).json(novoPaciente);
-    } catch (error) {
-      res.status(500).json({ error: 'Erro ao criar paciente' });
+      next(err);
     }
   },
 
-  atualizar: async (req, res) => {
+  atualizar: async (req, res, next) => {
     try {
-      const pacienteAtualizado = await pacienteService.atualizar(req.params.id, req.body);
-      res.json(pacienteAtualizado);
-    } catch {
-      res.status(500).json({ error: 'Erro ao atualizar paciente' });
+      const { id } = req.params;
+      const dados = req.body;
+      const atualizado = await pacienteService.atualizar(id, dados);
+      if (!atualizado) throw new AppError(404, 'Paciente não encontrado para atualização');
+      res.json(atualizado);
+    } catch (err) {
+      next(err);
     }
   },
 
-  deletar: async (req, res) => {
+  deletar: async (req, res, next) => {
     try {
-      await pacienteService.deletar(req.params.id);
+      const { id } = req.params;
+      await pacienteService.deletar(id);
       res.status(204).send();
-    } catch {
-      res.status(500).json({ error: 'Erro ao deletar paciente' });
+    } catch (err) {
+      // Pode ser P2025 se o registro não existir
+      if (err.code === 'P2025') {
+        return next(new AppError(404, 'Paciente não encontrado para exclusão'));
+      }
+      next(err);
     }
   }
 };
