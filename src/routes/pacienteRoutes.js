@@ -12,6 +12,7 @@ router.get('/', pacienteController.listarTodos);
 router.get('/:id', pacienteController.buscarPorId);
 router.post('/', validate(criarPacienteSchema), pacienteController.criar);
 router.put('/:id', validate(atualizarPacienteSchema), pacienteController.atualizar);
+router.patch('/:id', validate(atualizarPacienteSchema), pacienteController.atualizar);
 router.delete('/:id', pacienteController.deletar);
 
 
