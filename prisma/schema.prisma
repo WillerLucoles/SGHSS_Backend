@@ -26,23 +26,33 @@ model Paciente {
 }
 
 model ProfissionalDeSaude {
-  id                      Int         @id @default(autoincrement())
-  nome                    String
-  cpf                     String      @unique
-  especialidade           String
-  contato                 String
-  consultas               Consulta[]
+  id             Int              @id @default(autoincrement())
+  nome           String
+  cpf            String           @unique
+  especialidade  String
+  contato        String
+  consultas      Consulta[]
+  disponibilidades DisponibilidadeProfissional[]
 }
 
+model DisponibilidadeProfissional {
+  id             Int      @id @default(autoincrement())
+  profissional   ProfissionalDeSaude @relation(fields: [profissionalId], references: [id])
+  profissionalId Int
+  diaSemana      Int       // 0=Domingo … 6=Sábado
+  inicio         String    // “09:00”
+  fim            String    // “13:00”
+}
 
 model Consulta {
-  id              Int      @id @default(autoincrement())
-  dataConsulta    DateTime
-  horario         String
-  status          String
-  pacienteId      Int
-  profissionalId  Int
-  paciente        Paciente           @relation(fields: [pacienteId], references: [id])
-  profissional    ProfissionalDeSaude @relation(fields: [profissionalId], references: [id])
+  id             Int       @id @default(autoincrement())
+  dataConsulta   DateTime
+  horario        String
+  status         String
+  paciente       Paciente  @relation(fields: [pacienteId], references: [id])
+  pacienteId     Int
+  profissional   ProfissionalDeSaude @relation(fields: [profissionalId], references: [id])
+  profissionalId Int
 }
+
 

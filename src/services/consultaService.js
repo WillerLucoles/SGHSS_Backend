@@ -1,36 +1,44 @@
-// src/services/consultaService.js
 const prisma = require('../config/prismaClient');
+const AppError = require('../utils/AppError');
 
-const consultaService = {
-  listarTodos: async () => {
-    return await prisma.consulta.findMany();
-  },
+async function criar(data) {
+  const { profissionalId, dataConsulta, horario } = data;
+  const diaSemana = new Date(dataConsulta).getDay();
 
-  buscarPorId: async (id) => {
-    return await prisma.consulta.findUnique({ where: { id: Number(id) } });
-  },
-
-  criar: async (dados) => {
-    return await prisma.consulta.create({ data: dados });
-  },
-
-  atualizar: async (id, dados) => {
-    return await prisma.consulta.update({
-      where: { id: Number(id) },
-      data: dados
-    });
-  },
-
-  deletar: async (id) => {
-    return await prisma.consulta.delete({ where: { id: Number(id) } });
-  },
-
-  cancelar: async (id) => {
-    return await prisma.consulta.update({
-      where: { id: Number(id) },
-      data: { status: 'cancelada' }
-    });
+  const disp = await prisma.disponibilidade.findFirst({
+    where: {
+      profissionalId,
+      diaSemana,
+      inicio: { lte: horario },
+      fim:   { gte: horario }
+    }
+  });
+  if (!disp) {
+    throw new AppError(
+      400,
+      'Profissional não atende no dia/horário solicitado'
+    );
   }
-};
 
-module.exports = consultaService;
+  const conflito = await prisma.consulta.findFirst({
+    where: {
+      profissionalId,
+      dataConsulta,
+      horario
+    }
+  });
+  if (conflito) {
+    throw new AppError(409, 'Horário já reservado para outro paciente');
+  }
+
+  return prisma.consulta.create({ data });
+}
+
+async function listarTodos() {
+  return prisma.consulta.findMany();
+}
+
+module.exports = {
+  criar,
+  listarTodos
+};

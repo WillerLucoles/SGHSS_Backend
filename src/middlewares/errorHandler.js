@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 const AppError = require('../utils/AppError');
 
 function errorHandler(err, req, res, next) {
-  // 1) Erros de validação do Zod
+
   if (err instanceof ZodError) {
     const errors = err.errors.map(e => ({
       field: e.path.join('.'),
@@ -14,7 +14,7 @@ function errorHandler(err, req, res, next) {
     return res.status(400).json({ errors });
   }
 
-  // 2) Erros criados via AppError
+
   if (err instanceof AppError) {
     logger.warn('AppError: %d %s', err.status, err.message);
     return res.status(err.status).json({ error: err.message });
