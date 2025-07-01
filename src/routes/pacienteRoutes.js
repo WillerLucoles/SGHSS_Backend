@@ -1,19 +1,23 @@
-// src/routes/pacienteRoutes.js
 const express = require('express');
-const router = express.Router();
-const pacienteController = require('../controllers/pacienteController');
+const consultaController = require('../controllers/consultaController');
 const validate = require('../middlewares/validate');
-const { criarPacienteSchema, atualizarPacienteSchema } = require('../validators/pacienteValidator');
+const {
+  criarConsultaSchema,
+  atualizarConsultaSchema
+} = require('../validators/consultaValidator');
 
+const router = express.Router();
 
-
-
-router.get('/', pacienteController.listarTodos);
-router.get('/:id', pacienteController.buscarPorId);
-router.post('/', validate(criarPacienteSchema), pacienteController.criar);
-router.put('/:id', validate(atualizarPacienteSchema), pacienteController.atualizar);
-router.patch('/:id', validate(atualizarPacienteSchema), pacienteController.atualizar);
-router.delete('/:id', pacienteController.deletar);
-
+router.post('/', validate(criarConsultaSchema), consultaController.criar);
+router.put('/:id', validate(criarConsultaSchema), consultaController.atualizar);
+router.patch(
+  '/:id',
+  validate(atualizarConsultaSchema),
+  consultaController.atualizar
+);
+router.get('/', consultaController.listarTodos);
+router.get('/:id', consultaController.buscarPorId);
+router.patch('/:id/cancelar', consultaController.cancelar);
+router.delete('/:id', consultaController.deletar);
 
 module.exports = router;

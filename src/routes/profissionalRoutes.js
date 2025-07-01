@@ -1,17 +1,22 @@
-// src/routes/profissionalRoutes.js
 const express = require('express');
-const router = express.Router();
 const profissionalController = require('../controllers/profissionalController');
 const validate = require('../middlewares/validate');
-const { criarProfissionalSchema, atualizarProfissionalSchema } = require('../validators/profissionalValidator');
+const {
+  criarProfissionalSchema,
+  atualizarProfissionalSchema
+} = require('../validators/profissionalValidator');
 
+const router = express.Router();
 
-
-
-router.get('/', profissionalController.listarTodos);
-router.get('/:id', profissionalController.buscarPorId);
 router.post('/', validate(criarProfissionalSchema), profissionalController.criar);
-router.put('/:id', validate(atualizarProfissionalSchema), profissionalController.atualizar);
+router.put('/:id', validate(criarProfissionalSchema), profissionalController.atualizar);
+router.patch(
+  '/:id',
+  validate(atualizarProfissionalSchema),
+  profissionalController.atualizar
+);
+router.get('/:id', profissionalController.buscarPorId);
+router.get('/', profissionalController.listarTodos);
 router.delete('/:id', profissionalController.deletar);
 
 module.exports = router;

@@ -1,3 +1,4 @@
+// src/validators/consultaValidator.js
 const { z } = require('zod');
 
 const criarConsultaSchema = z.object({
@@ -8,5 +9,7 @@ const criarConsultaSchema = z.object({
   profissionalId: z.number().int().positive()
 });
 
+
 const atualizarConsultaSchema = criarConsultaSchema.partial();
+
 module.exports = { criarConsultaSchema, atualizarConsultaSchema };
