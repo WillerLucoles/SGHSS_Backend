@@ -1,58 +1,336 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma Schema File
+// This file defines the data model for the SGHSS application using Prisma ORM.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "postgresql" 
+  url      = env("DATABASE_URL") 
+}
+
+// 2. ENUMs: Tipos pré-definidos para manter a consistência dos dados
+
+enum Role {
+  PACIENTE
+  PROFISSIONAL
+  ADMINISTRADOR
+}
+
+enum Genero {
+  MASCULINO
+  FEMININO
+  OUTRO
+}
+
+enum EstadoCivil {
+  SOLTEIRO
+  CASADO
+  DIVORCIADO
+  VIUVO
+  UNIAO_ESTAVEL
+}
+
+
+enum TipoCliente {
+  PARTICULAR
+  CONVENIO
+}
+
+enum TipoQuarto {
+  UTI
+  PARTICULAR
+  ENFERMARIA
+  APARTAMENTO
+}
+
+enum StatusLeito {
+  LIVRE
+  OCUPADO
+  MANUTENCAO
+  HIGIENIZACAO
+}
+
+enum StatusJanelaAtendimento {
+  LIVRE
+  AGENDADO
+  BLOQUEADO
+}
+
+enum StatusConsulta {
+  AGENDADA
+  REALIZADA
+  CANCELADA_PACIENTE
+  CANCELADA_PROFISSIONAL
+  NAO_COMPARECEU
+}
+
+enum StatusInternacao {
+  ATIVA
+  CONCLUIDA_ALTA
+  CONCLUIDA_OBITO
+}
+
+enum TipoDocumento {
+  EXAME_LABORATORIAL
+  EXAME_IMAGEM
+  LAUDO_MEDICO
+  TERMO_ALTA
+  RECEITA
+  OUTRO
+}
+
+
+// 3. Modelos (Tabelas do Banco de Dados)
+
+// --- ÁREA DE AUTENTICAÇÃO E USUÁRIOS ---
+
+model Usuario {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  senha        String
+  role         Role
+  ultimoLogin  DateTime?
+  dataCriacao  DateTime  @default(now())
+  dataUpdate   DateTime  @updatedAt
+
+  // Relações: Um usuário pode ser um (e apenas um) dos seguintes perfis
+  paciente      Paciente?
+  profissional  Profissional?
+  administrador Administrador?
 }
 
 model Paciente {
-  id             Int      @id @default(autoincrement())
-  nome           String
-  cpf            String   @unique
-  dataNascimento DateTime
-  endereco       String
-  contato        String
-  historicoClinico String?
+  id                       String     @id @default(uuid())
+  nome                     String
+  cpf                      String     @unique
+  dataNascimento           DateTime
+  genero                   Genero
+  estadoCivil              EstadoCivil?
+  telefonePrincipal        String
+  telefoneSecundario       String?
+  logradouro               String
+  numero                   String
+  complemento              String?
+  bairro                   String
+  cidade                   String
+  estado                   String
+  cep                      String
+  nomeContatoEmergencia    String?
+  telefoneContatoEmergencia String?
+  
+  // Campo para definir se o cliente é particular ou convênio
+  tipoCliente              TipoCliente @default(PARTICULAR)
 
-  Consulta Consulta[]
+  // Campos de convênio (opcionais, a serem preenchidos se tipoCliente for CONVENIO)
+  nomeConvenio             String?
+  numeroCarteirinha        String?
+  planoConvenio            String?
+  validadeCarteirinha      DateTime?
+
+  // Conexão com a "portaria" de usuários
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  usuarioId String  @unique // Garante que um paciente só pode estar ligado a um usuário
+
+  // Relações: O que um paciente "tem" no sistema
+  consultas Consultas[]
+  internacao Internacao?
+  prontuario Prontuario?
 }
 
-model ProfissionalDeSaude {
-  id             Int              @id @default(autoincrement())
-  nome           String
-  cpf            String           @unique
-  especialidade  String
-  contato        String
-  consultas      Consulta[]
-  disponibilidades DisponibilidadeProfissional[]
+model Profissional {
+  id                      String      @id @default(uuid())
+  nome                    String
+  cpf                     String      @unique
+  crm                     String      @unique
+  ufCrm                   String
+  especialidadePrincipal  String
+  especialidadesSecundarias String[]
+  telefone                String
+
+  // Conexão com a "portaria" de usuários
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  usuarioId String  @unique
+
+  // Relações: O que um profissional "tem" e "faz" no sistema
+  consultas        Consultas[]
+  horariosPadrao   HorarioPadrao[]
+  janelasAtendimento JanelaDeAtendimento[]
+  bloqueios        BloqueioHorario[]
+  internacoes      Internacao[]
+  entradasProntuario EntradaProntuario[]
 }
 
-model DisponibilidadeProfissional {
-  id             Int      @id @default(autoincrement())
-  profissional   ProfissionalDeSaude @relation(fields: [profissionalId], references: [id])
-  profissionalId Int
-  diaSemana      Int       // 0=Domingo … 6=Sábado
-  inicio         String    // “09:00”
-  fim            String    // “13:00”
-}
+model Administrador {
+  id      String  @id @default(uuid())
+  nome    String
+  cargo   String
 
-model Consulta {
-  id             Int       @id @default(autoincrement())
-  dataConsulta   DateTime
-  horario        String
-  status         String
-  paciente       Paciente  @relation(fields: [pacienteId], references: [id])
-  pacienteId     Int
-  profissional   ProfissionalDeSaude @relation(fields: [profissionalId], references: [id])
-  profissionalId Int
+  // Vínculo com a entidade de autenticação (Usuario)
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  usuarioId String  @unique
 }
 
 
+// --- ÁREA DE AGENDAMENTO E CONSULTAS ---
+
+model HorarioPadrao {
+  id                    String    @id @default(uuid())
+  diaDaSemana           Int       // 0: Domingo, 1: Segunda, ..., 6: Sábado
+  horaInicio            String    // Formato "HH:MM"
+  horaFim               String    // Formato "HH:MM"
+  duracaoConsultaMinutos Int       @default(30)
+
+  // Conexão: A quem pertence este horário padrão
+  profissional   Profissional @relation(fields: [profissionalId], references: [id])
+  profissionalId String
+}
+
+model JanelaDeAtendimento {
+  id             String                  @id @default(uuid())
+  dataHoraInicio DateTime
+  dataHoraFim    DateTime
+  status         StatusJanelaAtendimento @default(LIVRE)
+
+  // Conexão: A quem pertence esta janela de horário
+  profissional   Profissional @relation(fields: [profissionalId], references: [id])
+  profissionalId String
+
+  // Conexão: Qual consulta preencheu esta janela
+  consulta Consultas?
+
+  @@unique([profissionalId, dataHoraInicio]) // Um profissional só pode ter uma janela por horário de início
+}
+
+model Consultas {
+  id             String         @id @default(uuid())
+  statusConsulta StatusConsulta @default(AGENDADA)
+  dataCriacao    DateTime       @default(now())
+  dataUpdate     DateTime       @updatedAt
+
+  // Conexão: Quem está na consulta
+  paciente       Paciente     @relation(fields: [pacienteId], references: [id])
+  pacienteId     String
+  profissional   Profissional @relation(fields: [profissionalId], references: [id])
+  profissionalId String
+
+  // Conexão: Qual janela de atendimento esta consulta ocupou
+  janelaDeAtendimento   JanelaDeAtendimento @relation(fields: [janelaDeAtendimentoId], references: [id])
+  janelaDeAtendimentoId String              @unique
+
+  // Conexão: Qual anotação no prontuário esta consulta gerou
+  entradaProntuario EntradaProntuario?
+}
+
+// Adicionado modelo para bloqueios de horário
+model BloqueioHorario {
+  id              String   @id @default(uuid())
+  inicio          DateTime
+  fim             DateTime
+  motivo          String?
+
+  profissional   Profissional @relation(fields: [profissionalId], references: [id])
+  profissionalId String
+}
+
+
+// --- ÁREA DE INTERNAÇÃO E LEITOS ---
+
+model Quarto {
+  id         String     @id @default(uuid())
+  numeroQuarto String     @unique
+  tipo       TipoQuarto
+  capacidade Int
+
+  // Relação: Os leitos que estão neste quarto
+  leitos Leito[]
+}
+
+model Leito {
+  id               String       @id @default(uuid())
+  identificacaoLeito String
+  status           StatusLeito  @default(LIVRE)
+
+  // Conexão: A que quarto este leito pertence
+  quarto   Quarto @relation(fields: [quartoId], references: [id])
+  quartoId String
+
+  // Conexão: A internação atual neste leito
+  internacao Internacao?
+
+  @@unique([quartoId, identificacaoLeito]) // A identificação do leito é única por quarto
+}
+
+model Internacao {
+  id                 String           @id @default(uuid())
+  dataEntrada        DateTime
+  dataPrevistaAlta   DateTime?
+  dataEfetivaAlta    DateTime?
+  status             StatusInternacao @default(ATIVA)
+
+  // Conexão: Quem está internado e onde
+  paciente   Paciente @relation(fields: [pacienteId], references: [id])
+  pacienteId String   @unique // Um paciente só pode ter uma internação ativa por vez
+  leito      Leito    @relation(fields: [leitoId], references: [id])
+  leitoId    String   @unique // Um leito só pode ter uma internação por vez
+
+  // Conexão: Quem é o profissional responsável
+  profissionalResponsavel   Profissional @relation(fields: [profissionalId], references: [id])
+  profissionalId            String
+
+  // Relação: As anotações no prontuário durante esta internação
+  entradasProntuario EntradaProntuario[]
+}
+
+
+// --- ÁREA DE DOCUMENTAÇÃO CLÍNICA (PRONTUÁRIOS) ---
+
+model Prontuario {
+  id          String   @id @default(uuid())
+  dataCriacao DateTime @default(now())
+
+  // Conexão: A quem pertence este prontuário
+  paciente   Paciente @relation(fields: [pacienteId], references: [id])
+  pacienteId String   @unique
+
+  // Relação: Todas as entradas de anotações neste prontuário
+  entradas EntradaProntuario[]
+}
+
+model EntradaProntuario {
+  id          String    @id @default(uuid())
+  dataHora    DateTime  @default(now())
+  titulo      String
+  descricao   String    @db.Text // Usar um tipo de texto maior para descrições longas
+
+  // Conexão: Onde esta entrada pertence
+  prontuario   Prontuario @relation(fields: [prontuarioId], references: [id])
+  prontuarioId String
+  
+  // Conexão: Quem escreveu esta entrada
+  profissional   Profissional @relation(fields: [profissionalId], references: [id])
+  profissionalId String
+
+  // Conexões Opcionais: Esta entrada foi originada por uma consulta ou internação?
+  consulta     Consultas? @relation(fields: [consultaId], references: [id])
+  consultaId   String?    @unique
+  internacao   Internacao? @relation(fields: [internacaoId], references: [id])
+  internacaoId String?
+
+  // Relação: Os documentos (PDFs, etc.) anexados a esta entrada
+  documentosAnexados DocumentoAnexado[]
+}
+
+model DocumentoAnexado {
+  id              String        @id @default(uuid())
+  nomeArquivo     String
+  tipoDocumento   TipoDocumento
+  urlArquivo      String        // Link para o arquivo no serviço de armazenamento
+  
+  dataUpload      DateTime      @default(now())
+  
+  // Conexão: A qual entrada do prontuário este documento pertence
+  entradaProntuario   EntradaProntuario @relation(fields: [entradaProntuarioId], references: [id])
+  entradaProntuarioId String
+}
