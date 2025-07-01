@@ -5,7 +5,7 @@ async function criar(data) {
   const { profissionalId, dataConsulta, horario } = data;
   const diaSemana = new Date(dataConsulta).getDay();
 
-  const disp = await prisma.disponibilidade.findFirst({
+  const disp = await prisma.disponibilidadeProfissional.findFirst({
     where: {
       profissionalId,
       diaSemana,
