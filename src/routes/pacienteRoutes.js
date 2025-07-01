@@ -1,23 +1,35 @@
+// src/routes/pacienteRoutes.js
 const express = require('express');
-const consultaController = require('../controllers/consultaController');
 const validate = require('../middlewares/validate');
+const pacienteController = require('../controllers/pacienteController');
 const {
-  criarConsultaSchema,
-  atualizarConsultaSchema
-} = require('../validators/consultaValidator');
+  criarPacienteSchema,
+  atualizarPacienteSchema
+} = require('../validators/pacienteValidator');
 
 const router = express.Router();
 
-router.post('/', validate(criarConsultaSchema), consultaController.criar);
-router.put('/:id', validate(criarConsultaSchema), consultaController.atualizar);
+router.get('/', pacienteController.listarTodos);
+router.get('/:id', pacienteController.buscarPorId);
+
+router.post(
+  '/',
+  validate(criarPacienteSchema),
+  pacienteController.criar
+);
+
+router.put(
+  '/:id',
+  validate(criarPacienteSchema),
+  pacienteController.atualizar
+);
+
 router.patch(
   '/:id',
-  validate(atualizarConsultaSchema),
-  consultaController.atualizar
+  validate(atualizarPacienteSchema),
+  pacienteController.atualizar
 );
-router.get('/', consultaController.listarTodos);
-router.get('/:id', consultaController.buscarPorId);
-router.patch('/:id/cancelar', consultaController.cancelar);
-router.delete('/:id', consultaController.deletar);
+
+router.delete('/:id', pacienteController.deletar);
 
 module.exports = router;
