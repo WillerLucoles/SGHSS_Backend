@@ -1,4 +1,4 @@
-// Em: src/controllers/pacienteController.js
+// src/controllers/pacienteController.js
 
 import pacienteService from '../services/pacienteService.js';
 import AppError from '../utils/AppError.js';
@@ -55,6 +55,24 @@ const pacienteController = {
       next(err);
     }
   },
+
+  buscarMeuPerfil: async (req, res, next) => {
+    try {
+      // O ID do utilizador logado é injetado pelo nosso authMiddleware
+      const usuarioId = req.usuario.id;
+      
+      const paciente = await pacienteService.buscarPorUsuarioId(usuarioId);
+      
+      if (!paciente) {
+        throw new AppError(404, 'Perfil de paciente não encontrado para este utilizador.');
+      }
+      
+      res.json(paciente);
+    } catch (err) {
+      next(err);
+    }
+  },
+  
 };
 
 export default pacienteController;

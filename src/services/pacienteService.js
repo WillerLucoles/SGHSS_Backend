@@ -27,7 +27,6 @@ const pacienteService = {
     });
   },
 
-
   listarTodos: async () => {
     return prisma.paciente.findMany({
       select: { id: true, nome: true, cpf: true, tipoCliente: true },
@@ -59,6 +58,14 @@ const pacienteService = {
         await tx.usuario.delete({ where: { id: paciente.usuarioId } });
     });
   },
+  
+  buscarPorUsuarioId: async (usuarioId) => {
+    return prisma.paciente.findUnique({
+      where: { usuarioId: usuarioId },
+      include: { usuario: { select: { email: true } } },
+    });
+  },
+
 };
 
 export default pacienteService;
