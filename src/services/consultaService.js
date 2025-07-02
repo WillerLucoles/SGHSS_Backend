@@ -1,7 +1,11 @@
-const prisma = require('../config/prismaClient');
-const AppError = require('../utils/AppError');
+// src/services/consultaService.js
 
-async function criar(data) {
+
+import prisma from '../config/prismaClient.js';
+import AppError from '../utils/AppError.js';
+
+// --- FUNÇÕES DO SERVIÇO ---
+export async function criar(data) {
   const { profissionalId, dataConsulta, horario } = data;
   const diaSemana = new Date(dataConsulta).getDay();
 
@@ -10,8 +14,8 @@ async function criar(data) {
       profissionalId,
       diaSemana,
       inicio: { lte: horario },
-      fim:   { gte: horario }
-    }
+      fim: { gte: horario },
+    },
   });
   if (!disp) {
     throw new AppError(
@@ -24,8 +28,8 @@ async function criar(data) {
     where: {
       profissionalId,
       dataConsulta,
-      horario
-    }
+      horario,
+    },
   });
   if (conflito) {
     throw new AppError(409, 'Horário já reservado para outro paciente');
@@ -34,11 +38,7 @@ async function criar(data) {
   return prisma.consulta.create({ data });
 }
 
-async function listarTodos() {
+export async function listarTodos() {
   return prisma.consulta.findMany();
 }
 
-module.exports = {
-  criar,
-  listarTodos
-};

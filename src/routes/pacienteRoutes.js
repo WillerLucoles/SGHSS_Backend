@@ -1,35 +1,13 @@
 // src/routes/pacienteRoutes.js
-const express = require('express');
-const validate = require('../middlewares/validate');
-const pacienteController = require('../controllers/pacienteController');
-const {
-  criarPacienteSchema,
-  atualizarPacienteSchema
-} = require('../validators/pacienteValidator');
+
+import express from 'express';
+import pacienteController from '../controllers/pacienteController.js';
 
 const router = express.Router();
 
-router.get('/', pacienteController.listarTodos);
-router.get('/:id', pacienteController.buscarPorId);
+// Nova rota para registro de pacientes
+router.post('/register', pacienteController.registrar);
 
-router.post(
-  '/',
-  validate(criarPacienteSchema),
-  pacienteController.criar
-);
+// ... (suas outras rotas de /pacientes, como GET, PUT, DELETE, que devem ser protegidas no futuro)
 
-router.put(
-  '/:id',
-  validate(criarPacienteSchema),
-  pacienteController.atualizar
-);
-
-router.patch(
-  '/:id',
-  validate(atualizarPacienteSchema),
-  pacienteController.atualizar
-);
-
-router.delete('/:id', pacienteController.deletar);
-
-module.exports = router;
+export default router;

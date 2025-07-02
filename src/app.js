@@ -1,15 +1,20 @@
 // src/app.js
-// In production, we recommend using `prisma generate --no-engine` (See: `prisma generate --help`)
 
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-const logger = require('./utils/logger');
-const routes = require('./routes');
-const errorHandler = require('./middlewares/errorHandler');
+import dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import logger from './utils/logger.js';
+import routes from './routes/index.js';
+import errorHandler from './middlewares/errorHandler.js';
+import AppError from './utils/AppError.js';
+
+// --- CONFIGURAÇÃO INICIAL ---
+dotenv.config();
 
 const app = express();
+
+// --- MIDDLEWARES ---
 
 // 1. HTTP request logging
 app.use(morgan('dev'));
@@ -21,13 +26,16 @@ app.use(express.json());
 // 3. Suas rotas
 app.use('/api', routes);
 
-// 4. Captura 404 (opcional)
+// 4. Captura de rotas não encontradas (404)
 app.use((req, res, next) => {
-  next(new (require('./utils/AppError'))(404, 'Recurso não encontrado'));
+  next(new AppError(404, 'Recurso não encontrado'));
 });
 
 // 5. Middleware de erros centralizado
 app.use(errorHandler);
 
+
+// --- INICIALIZAÇÃO DO SERVIDOR ---
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => logger.info('Servidor rodando na porta %d', PORT));
+app.listen(PORT, () => logger.info(`Servidor rodando na porta ${PORT}`));

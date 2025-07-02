@@ -1,4 +1,6 @@
-const { createLogger, format, transports } = require('winston');
+// src/utils/logger.js
+import { createLogger, format, transports } from 'winston';
+
 
 const level = process.env.LOG_LEVEL || 'info';
 const isProd = process.env.NODE_ENV === 'production';
@@ -9,20 +11,21 @@ const logger = createLogger({
     format.timestamp(),
     format.errors({ stack: true }),
     format.splat(),
-    format.json()       
+    format.json()
   ),
   transports: [
-    new transports.Console({ 
+    new transports.Console({
       format: format.combine(
         format.colorize(),
         format.simple()
-      )
+      ),
     }),
-  
+
     ...(isProd
-      ? [ new transports.File({ filename: 'logs/error.log', level: 'error' }) ]
-      : [])
-  ]
+      ? [new transports.File({ filename: 'logs/error.log', level: 'error' })]
+      : []),
+  ],
 });
 
-module.exports = logger;
+
+export default logger;

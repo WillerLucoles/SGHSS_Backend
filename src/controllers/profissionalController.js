@@ -1,6 +1,9 @@
-const profissionalService = require('../services/profissionalService');
-const AppError = require('../utils/AppError');
+// src/controllers/profissionalController.js
 
+import * as profissionalService from '../services/profissionalService.js';
+import AppError from '../utils/AppError.js';
+
+// --- CONTROLLERS ---
 const profissionalController = {
   listarTodos: async (req, res, next) => {
     try {
@@ -14,7 +17,9 @@ const profissionalController = {
   buscarPorId: async (req, res, next) => {
     try {
       const prof = await profissionalService.buscarPorId(req.params.id);
-      if (!prof) throw new AppError(404, 'Profissional não encontrado');
+      if (!prof) {
+        throw new AppError(404, 'Profissional não encontrado');
+      }
       res.json(prof);
     } catch (err) {
       next(err);
@@ -36,8 +41,13 @@ const profissionalController = {
 
   atualizar: async (req, res, next) => {
     try {
-      const atualizado = await profissionalService.atualizar(req.params.id, req.body);
-      if (!atualizado) throw new AppError(404, 'Profissional não encontrado para atualização');
+      const atualizado = await profissionalService.atualizar(
+        req.params.id,
+        req.body
+      );
+      if (!atualizado) {
+        throw new AppError(404, 'Profissional não encontrado para atualização');
+      }
       res.json(atualizado);
     } catch (err) {
       next(err);
@@ -54,7 +64,8 @@ const profissionalController = {
       }
       next(err);
     }
-  }
+  },
 };
 
-module.exports = profissionalController;
+
+export default profissionalController;

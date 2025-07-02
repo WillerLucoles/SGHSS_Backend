@@ -1,7 +1,11 @@
-const disponibilidadeConsultaService = require('../services/disponibilidadeConsultaService');
-const AppError = require('../utils/AppError');
+// src/controllers/disponibilidadeConsultaController.js
 
-module.exports = {
+
+import * as disponibilidadeConsultaService from '../services/disponibilidadeConsultaService.js';
+import AppError from '../utils/AppError.js';
+
+// --- CONTROLLERS (exportados como um objeto default) ---
+const disponibilidadeConsultaController = {
   criar: async (req, res, next) => {
     try {
       const disp = await disponibilidadeConsultaService.criar(req.body);
@@ -14,10 +18,14 @@ module.exports = {
   listarPorProfissional: async (req, res, next) => {
     try {
       const profId = Number(req.params.profissionalId);
-      const lista = await disponibilidadeConsultaService.listarPorProfissional(profId);
+      const lista =
+        await disponibilidadeConsultaService.listarPorProfissional(profId);
       res.json(lista);
     } catch (err) {
       next(err);
     }
-  }
+  },
 };
+
+
+export default disponibilidadeConsultaController;

@@ -1,11 +1,22 @@
-const express = require('express');
-const validate = require('../middlewares/validate');
-const { criarDisponibilidadeConsultaSchema } = require('../validators/disponibilidadeConsultaValidator');
-const disponibilidadeConsultaController = require('../controllers/disponibilidadeConsultaController');
+// src/routes/disponibilidadeConsultaRoutes.js
 
+import express from 'express';
+import validate from '../middlewares/validate.js';
+import { criarDisponibilidadeConsultaSchema } from '../validators/disponibilidadeConsultaValidator.js';
+import disponibilidadeConsultaController from '../controllers/disponibilidadeConsultaController.js';
+
+// --- CONFIGURAÇÃO DO ROTEADOR ---
 const router = express.Router();
 
-router.post('/', validate(criarDisponibilidadeConsultaSchema), disponibilidadeConsultaController.criar);
-router.get('/:profissionalId', disponibilidadeConsultaController.listarPorProfissional);
+router.post(
+  '/',
+  validate(criarDisponibilidadeConsultaSchema),
+  disponibilidadeConsultaController.criar
+);
+router.get(
+  '/:profissionalId',
+  disponibilidadeConsultaController.listarPorProfissional
+);
 
-module.exports = router;
+
+export default router;
