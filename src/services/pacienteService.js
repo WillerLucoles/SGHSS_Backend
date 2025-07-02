@@ -4,53 +4,61 @@ import prisma from '../config/prismaClient.js';
 import AppError from '../utils/AppError.js';
 import bcrypt from 'bcryptjs';
 
+const pacienteService = {
+  registrarNovoPaciente: async (dadosPaciente) => {
+    const { email, senha, cpf, ...outrosDadosPaciente } = dadosPaciente;
 
+    const usuarioExistente = await prisma.usuario.findUnique({ where: { email } });
+    if (usuarioExistente) throw new AppError(409, 'Este email já está em uso.');
 
-const registrarNovoPaciente = async (dadosPaciente) => {
-  const { nome, cpf, dataNascimento, email, senha, ...outrosDados } = dadosPaciente;
+    const pacienteExistente = await prisma.paciente.findUnique({ where: { cpf } });
+    if (pacienteExistente) throw new AppError(409, 'Este CPF já está cadastrado.');
 
-  // 1. Verificar se o email ou CPF já existem para evitar duplicatas
-  const usuarioExistente = await prisma.usuario.findUnique({ where: { email } });
-  if (usuarioExistente) {
-    throw new AppError('Este email já está em uso.', 409); // 409 Conflict
-  }
+    const senhaHash = await bcrypt.hash(senha, 8);
 
-  const pacienteExistente = await prisma.paciente.findUnique({ where: { cpf } });
-  if (pacienteExistente) {
-    throw new AppError('Este CPF já está cadastrado.', 409);
-  }
-
-  // 2. Criptografar a senha antes de salvar no banco
-  const senhaHash = await bcrypt.hash(senha, 8);
-
-  // 3. Usar uma transação para garantir que ambos os registros (Usuario e Paciente) sejam criados
-  const novoPaciente = await prisma.$transaction(async (tx) => {    
-    const novoUsuario = await tx.usuario.create({
-      data: {
-        email,
-        senha: senhaHash,
-        role: 'PACIENTE',
-      },
+    return prisma.$transaction(async (tx) => {
+      const novoUsuario = await tx.usuario.create({
+        data: { email, senha: senhaHash, role: 'PACIENTE' },
+      });
+      const pacienteCriado = await tx.paciente.create({
+        data: { ...outrosDadosPaciente, cpf, usuarioId: novoUsuario.id },
+      });
+      return pacienteCriado;
     });
+  },
 
-    // Cria a ficha completa do paciente, vinculando ao usuário
-    const pacienteCriado = await tx.paciente.create({
-      data: {
-        nome,
-        cpf,
-        dataNascimento: new Date(dataNascimento),
-        ...outrosDados,
-        usuarioId: novoUsuario.id, // Vínculo com a entidade de autenticação
-      },
+
+  listarTodos: async () => {
+    return prisma.paciente.findMany({
+      select: { id: true, nome: true, cpf: true, tipoCliente: true },
     });
+  },
 
-    return pacienteCriado;
-  });
+  buscarPorId: async (id) => {
+    return prisma.paciente.findUnique({
+      where: { id },
+      include: { usuario: { select: { email: true } } },
+    });
+  },
 
-  return novoPaciente;
+  atualizar: async (id, dados) => {
+    return prisma.paciente.update({
+      where: { id },
+      data: dados,
+    });
+  },
+
+  deletar: async (id) => {
+    // Atenção: num sistema real, talvez não queira apagar um paciente, mas sim "inativá-lo".
+    // Também seria preciso apagar o usuário associado numa transação. Por simplicidade, vamos apagar.
+    const paciente = await prisma.paciente.findUnique({ where: { id } });
+    if (!paciente) throw new AppError(404, 'Paciente não encontrado para exclusão.');
+
+    return prisma.$transaction(async (tx) => {
+        await tx.paciente.delete({ where: { id } });
+        await tx.usuario.delete({ where: { id: paciente.usuarioId } });
+    });
+  },
 };
 
-
-export default {  
-  registrarNovoPaciente,
-};
+export default pacienteService;
