@@ -12,20 +12,64 @@ import {
 
 const router = express.Router();
 
-// --- ROTAS DE CRIAÇÃO ---
-router.post('/', authMiddleware, authorize(['ADMINISTRADOR']), validate(criarProfissionalSchema), profissionalController.criar);
+// --- ROTAS DE PERFIL DO PROFISSIONAL LOGADO ('/me') ---
+router.get(
+  '/me',
+  authMiddleware,
+  authorize(['PROFISSIONAL']), // Apenas um profissional pode ver o seu próprio perfil
+  profissionalController.buscarMeuPerfil
+);
 
-// --- ROTAS DE LEITURA ---
-router.get('/', authMiddleware, authorize(['ADMINISTRADOR', 'PROFISSIONAL']), profissionalController.listarTodos);
+router.put(
+  '/me',
+  authMiddleware,
+  authorize(['PROFISSIONAL']), // Apenas um profissional pode atualizar os seus próprios dados
+  validate(atualizarProfissionalSchema),
+  profissionalController.atualizarMeuPerfil
+);
 
-router.get('/:id', authMiddleware, authorize(['ADMINISTRADOR', 'PROFISSIONAL']), profissionalController.buscarPorId);
+// --- ROTAS ADMINISTRATIVAS ---
 
-// --- ROTAS DE ATUALIZAÇÃO ---
-router.put( '/:id', authMiddleware, authorize(['ADMINISTRADOR']), validate(criarProfissionalSchema), profissionalController.atualizar);
+// ROTA DE CRIAÇÃO (Apenas para Administradores)
+router.post(
+  '/',
+  authMiddleware,
+  authorize(['ADMINISTRADOR']),
+  validate(criarProfissionalSchema),
+  profissionalController.criar
+);
 
-router.patch( '/:id', authMiddleware, authorize(['ADMINISTRADOR']), validate(atualizarProfissionalSchema), profissionalController.atualizar);
+// ROTA DE LEITURA GERAL (Admins e Profissionais podem ver a lista)
+router.get(
+  '/',
+  authMiddleware,
+  authorize(['ADMINISTRADOR', 'PROFISSIONAL']),
+  profissionalController.listarTodos
+);
 
-// --- ROTA DE EXCLUSÃO ---
-router.delete( '/:id', authMiddleware, authorize(['ADMINISTRADOR']), profissionalController.deletar);
+// ROTA DE LEITURA POR ID (Admins e Profissionais podem ver detalhes)
+router.get(
+  '/:id',
+  authMiddleware,
+  authorize(['ADMINISTRADOR', 'PROFISSIONAL']),
+  profissionalController.buscarPorId
+);
+
+// ROTA DE ATUALIZAÇÃO POR ID (Apenas para Administradores)
+router.patch(
+  '/:id',
+  authMiddleware,
+  authorize(['ADMINISTRADOR']),
+  validate(atualizarProfissionalSchema),
+  profissionalController.atualizar
+);
+
+// ROTA DE EXCLUSÃO (Apenas para Administradores)
+router.delete(
+  '/:id',
+  authMiddleware,
+  authorize(['ADMINISTRADOR']),
+  profissionalController.deletar
+);
 
 export default router;

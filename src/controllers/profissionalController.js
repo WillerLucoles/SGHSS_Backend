@@ -3,12 +3,47 @@
 import profissionalService from '../services/profissionalService.js';
 import AppError from '../utils/AppError.js';
 
-// --- CONTROLLERS ---
 const profissionalController = {
+  // --- ROTAS /me PARA O PROFISSIONAL LOGADO ---
+
+  buscarMeuPerfil: async (req, res, next) => {
+    try {
+      const profissional = await profissionalService.buscarPorUsuarioId(
+        req.usuario.id
+      );
+      res.json(profissional);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  atualizarMeuPerfil: async (req, res, next) => {
+    try {
+      const profissionalAtualizado = await profissionalService.atualizarMeuPerfil(
+        req.usuario.id,
+        req.body
+      );
+      res.json(profissionalAtualizado);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // --- ROTAS ADMINISTRATIVAS ---
+
+  criar: async (req, res, next) => {
+    try {
+      const novoProfissional = await profissionalService.criar(req.body);
+      res.status(201).json(novoProfissional);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   listarTodos: async (req, res, next) => {
     try {
-      const list = await profissionalService.listarTodos();
-      res.json({ profissionais: list });
+      const listaDeProfissionais = await profissionalService.listarTodos();
+      res.json(listaDeProfissionais);
     } catch (err) {
       next(err);
     }
@@ -16,45 +51,31 @@ const profissionalController = {
 
   buscarPorId: async (req, res, next) => {
     try {
-      const prof = await profissionalService.buscarPorId(req.params.id);
-      if (!prof) {
-        throw new AppError(404, 'Profissional não encontrado');
+      const profissional = await profissionalService.buscarPorId(req.params.id);
+      // A verificação de "não encontrado" é melhor delegada ao serviço.
+      if (!profissional) {
+        throw new AppError(404, 'Profissional não encontrado.');
       }
-      res.json(prof);
+      res.json(profissional);
     } catch (err) {
-      next(err);
-    }
-  },
-
-  criar: async (req, res, next) => {
-    try {
-      const dados = req.body;
-      const novo = await profissionalService.criar(dados);
-      res.status(201).json(novo);
-    } catch (err) {
-      if (err.code === 'P2002') {
-        if (err.meta.target.includes('cpf')) {
-          return next(new AppError(409, 'CPF de profissional já cadastrado'));
-        }
-        if (err.meta.target.includes('crm')) {
-            return next(new AppError(409, 'CRM de profissional já cadastrado'));
-        }
-      }
       next(err);
     }
   },
 
   atualizar: async (req, res, next) => {
     try {
-      const atualizado = await profissionalService.atualizar(
+      const profissionalAtualizado = await profissionalService.atualizar(
         req.params.id,
         req.body
       );
-      if (!atualizado) {
-        throw new AppError(404, 'Profissional não encontrado para atualização');
-      }
-      res.json(atualizado);
+      res.json(profissionalAtualizado);
     } catch (err) {
+      // O erro P2025 do Prisma significa "registo para atualizar não encontrado".
+      if (err.code === 'P2025') {
+        return next(
+          new AppError(404, 'Profissional não encontrado para atualização.')
+        );
+      }
       next(err);
     }
   },
@@ -65,12 +86,13 @@ const profissionalController = {
       res.status(204).send();
     } catch (err) {
       if (err.code === 'P2025') {
-        return next(new AppError(404, 'Profissional não encontrado para exclusão'));
+        return next(
+          new AppError(404, 'Profissional não encontrado para exclusão.')
+        );
       }
       next(err);
     }
   },
 };
-
 
 export default profissionalController;
