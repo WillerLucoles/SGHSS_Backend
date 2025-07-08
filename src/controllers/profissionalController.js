@@ -1,6 +1,6 @@
 // src/controllers/profissionalController.js
 
-import * as profissionalService from '../services/profissionalService.js';
+import profissionalService from '../services/profissionalService.js';
 import AppError from '../utils/AppError.js';
 
 // --- CONTROLLERS ---
@@ -32,8 +32,13 @@ const profissionalController = {
       const novo = await profissionalService.criar(dados);
       res.status(201).json(novo);
     } catch (err) {
-      if (err.code === 'P2002' && err.meta.target.includes('cpf')) {
-        return next(new AppError(409, 'CPF de profissional já cadastrado'));
+      if (err.code === 'P2002') {
+        if (err.meta.target.includes('cpf')) {
+          return next(new AppError(409, 'CPF de profissional já cadastrado'));
+        }
+        if (err.meta.target.includes('crm')) {
+            return next(new AppError(409, 'CRM de profissional já cadastrado'));
+        }
       }
       next(err);
     }
