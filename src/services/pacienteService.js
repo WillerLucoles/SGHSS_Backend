@@ -48,8 +48,6 @@ const pacienteService = {
   },
 
   deletar: async (id) => {
-    // Atenção: num sistema real, talvez não queira apagar um paciente, mas sim "inativá-lo".
-    // Também seria preciso apagar o usuário associado numa transação. Por simplicidade, vamos apagar.
     const paciente = await prisma.paciente.findUnique({ where: { id } });
     if (!paciente) throw new AppError(404, 'Paciente não encontrado para exclusão.');
 
@@ -83,6 +81,40 @@ const pacienteService = {
     });
 
     return pacienteAtualizado;
+  },
+
+  listarConsultasPorUsuario: async (usuarioId) => {
+    // Encontrar o perfil do paciente para obter o seu ID de paciente
+    const paciente = await prisma.paciente.findUnique({
+      where: { usuarioId: usuarioId },
+      select: { id: true },
+    });
+
+    if (!paciente) {
+      throw new AppError(404, 'Perfil de paciente não encontrado para este utilizador.');
+    }
+
+    // Buscar todas as consultas associadas a este ID de paciente
+    const consultas = await prisma.consultas.findMany({
+      where: {
+        pacienteId: paciente.id,
+      },
+      include: {
+        profissional: {
+          select: {
+            nome: true,
+            especialidadePrincipal: true,
+          },
+        },
+      },
+      orderBy: {
+        janelaDeAtendimento: {
+          dataHoraInicio: 'desc',
+        },
+      },
+    });
+
+    return consultas;
   },
 
 };

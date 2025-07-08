@@ -20,6 +20,7 @@ router.post(
 router.get('/', authMiddleware, pacienteController.listarTodos);
 router.get('/me',authMiddleware, authorize(['PACIENTE']), pacienteController.buscarMeuPerfil);
 router.put('/me',authMiddleware, authorize(['PACIENTE']), validate(atualizarMeuPerfilSchema), pacienteController.atualizarMeuPerfil);
+router.get('/me/consultas', authMiddleware, authorize(['PACIENTE']), pacienteController.listarMinhasConsultas);
 router.get('/:id', authMiddleware, authorize(['ADMINISTRADOR', 'PROFISSIONAL']), pacienteController.buscarPorId);
 router.put('/:id', authMiddleware, pacienteController.atualizar);
 router.delete('/:id', authMiddleware, pacienteController.deletar);

@@ -88,6 +88,19 @@ const pacienteController = {
       next(err);
     }
   },
+
+  listarMinhasConsultas: async (req, res, next) => {
+    try {
+      // O ID do utilizador logado é fornecido pelo authMiddleware
+      const usuarioId = req.usuario.id;
+
+      const consultas = await pacienteService.listarConsultasPorUsuario(usuarioId);
+      
+      res.json(consultas);
+    } catch (err) {
+      next(err);
+    }
+  },
   
 };
 
