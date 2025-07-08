@@ -66,6 +66,25 @@ const pacienteService = {
     });
   },
 
+  atualizarMeuPerfil: async (usuarioId, dadosParaAtualizar) => {
+    // Verifica se o usuário é um paciente
+    const paciente = await prisma.paciente.findUnique({
+      where: { usuarioId: usuarioId },
+      select: { id: true }
+    });
+
+    if (!paciente) {
+      throw new AppError(404, 'Perfil de paciente não encontrado para este utilizador.');
+    }
+
+    const pacienteAtualizado = await prisma.paciente.update({
+      where: { id: paciente.id },
+      data: dadosParaAtualizar,
+    });
+
+    return pacienteAtualizado;
+  },
+
 };
 
 export default pacienteService;

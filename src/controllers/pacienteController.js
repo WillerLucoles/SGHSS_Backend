@@ -72,6 +72,22 @@ const pacienteController = {
       next(err);
     }
   },
+
+  atualizarMeuPerfil: async (req, res, next) => {
+    try {
+      const usuarioId = req.usuario.id;
+      const dadosParaAtualizar = req.body;
+
+      const pacienteAtualizado = await pacienteService.atualizarMeuPerfil(
+        usuarioId,
+        dadosParaAtualizar
+      );
+      
+      res.json(pacienteAtualizado);
+    } catch (err) {
+      next(err);
+    }
+  },
   
 };
 

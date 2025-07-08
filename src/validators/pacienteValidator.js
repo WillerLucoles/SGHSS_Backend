@@ -27,3 +27,21 @@ export const registrarPacienteSchema = z.object({
   complemento: z.string().optional(),
   telefoneSecundario: z.string().optional(),
 });
+
+export const atualizarMeuPerfilSchema = z.object({
+  // A maioria dos campos é opcional na atualização, pois o utilizador 
+  nome: z.string().min(3, { message: 'O nome deve ter no mínimo 3 caracteres.' }).optional(),
+  dataNascimento: z.string().datetime({ message: 'A data deve estar no formato ISO 8601.' }).optional(),
+  genero: z.enum(['MASCULINO', 'FEMININO', 'OUTRO']).optional(),
+  telefonePrincipal: z.string().min(10, { message: 'O telefone deve ter no mínimo 10 caracteres.' }).optional(),
+  
+  // Endereço
+  logradouro: z.string().optional(),
+  numero: z.string().optional(),
+  bairro: z.string().optional(),
+  cidade: z.string().optional(),
+  estado: z.string().length(2, { message: 'O estado deve ter 2 caracteres.' }).optional(),
+  cep: z.string().length(8, { message: 'O CEP deve ter 8 caracteres.' }).optional(),
+  // Campos que não devem ser alterados pelo utilizador não são incluídos aqui,
+
+});
