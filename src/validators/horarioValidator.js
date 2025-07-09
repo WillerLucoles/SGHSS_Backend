@@ -7,3 +7,11 @@ export const criarHorarioPadraoSchema = z.object({
   horaFim: z.string({ required_error: 'A hora de fim é obrigatória.' }).regex(/^\d{2}:\d{2}$/, 'Formato de hora inválido. Use HH:MM.'),
   duracaoConsultaMinutos: z.number({ invalid_type_error: 'A duração deve ser um número.' }).int().positive().optional().default(30),
 });
+
+export const gerarAgendaSchema = z.object({
+  dataInicio: z.string().datetime({ message: 'A data de início deve estar no formato ISO 8601.' }),
+  dataFim: z.string().datetime({ message: 'A data de fim deve estar no formato ISO 8601.' }),
+}).refine(data => new Date(data.dataFim) > new Date(data.dataInicio), {
+  message: 'A data de fim deve ser posterior à data de início.',
+  path: ['dataFim'],
+});

@@ -22,7 +22,29 @@ const horarioController = {
     }
   },
 
+  gerarAgenda: async (req, res, next) => {
+    try {
+      const usuarioId = req.usuario.id;
+      const { dataInicio, dataFim } = req.body;
+
+      const resultado = await horarioService.gerarJanelasDeAtendimento({
+        usuarioId,
+        dataInicio,
+        dataFim,
+      });
+
+      res.status(201).json({
+        message: 'Agenda gerada com sucesso!',
+        totalJanelasCriadas: resultado.count,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
 
 };
+
+
 
 export default horarioController;
