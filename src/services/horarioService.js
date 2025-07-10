@@ -26,13 +26,10 @@ const horarioService = {
   },
 
   gerarJanelasDeAtendimento: async ({ usuarioId, dataInicio, dataFim }) => {
-    const profissional = await prisma.profissional.findUnique({
-      where: { usuarioId },
-      include: { horariosPadrao: true },
-    });
+    const profissional = await prisma.profissional.findUnique({ /* ... */ });
     if (!profissional) throw new AppError(404, 'Profissional não encontrado.');
     if (profissional.horariosPadrao.length === 0) {
-      throw new AppError(400, 'Nenhum horário padrão definido para este profissional.');
+        throw new AppError(400, 'Nenhum horário padrão definido.');
     }
 
     const janelasParaCriar = [];
@@ -40,43 +37,46 @@ const horarioService = {
     const dataFinal = new Date(dataFim);
 
     while (diaAtual <= dataFinal) {
-      const diaDaSemana = diaAtual.getDay();
-      const horarioDoDia = profissional.horariosPadrao.find(h => h.diaDaSemana === diaDaSemana);
+        const diaDaSemana = diaAtual.getUTCDay();
+        const horarioDoDia = profissional.horariosPadrao.find(
+            (h) => h.diaDaSemana === diaDaSemana
+        );
 
-      if (horarioDoDia) {
-        const { horaInicio, horaFim, duracaoConsultaMinutos } = horarioDoDia;
-        const [inicioH, inicioM] = horaInicio.split(':').map(Number);
-        const [fimH, fimM] = horaFim.split(':').map(Number);
+        if (horarioDoDia) {
+            const { horaInicio, horaFim, duracaoConsultaMinutos } = horarioDoDia;
+            
 
-        let slotAtual = new Date(diaAtual.toISOString().split('T')[0]);
-        slotAtual.setUTCHours(inicioH, inicioM, 0, 0);
+            const diaString = diaAtual.toISOString().split('T')[0]; 
+            
 
-        const fimDoTrabalho = new Date(diaAtual.toISOString().split('T')[0]);
-        fimDoTrabalho.setUTCHours(fimH, fimM, 0, 0);
+            let slotAtualUTC = new Date(`${diaString}T${horaInicio}:00.000Z`);
+            const fimDoTrabalhoUTC = new Date(`${diaString}T${horaFim}:00.000Z`);
 
-        while (slotAtual < fimDoTrabalho) {
-          const slotFim = new Date(slotAtual.getTime() + duracaoConsultaMinutos * 60000);
-          janelasParaCriar.push({
-            dataHoraInicio: new Date(slotAtual),
-            dataHoraFim: slotFim,
-            profissionalId: profissional.id,
-          });
-          slotAtual = slotFim;
+            while (slotAtualUTC < fimDoTrabalhoUTC) {
+                const slotFimUTC = new Date(
+                    slotAtualUTC.getTime() + duracaoConsultaMinutos * 60000
+                );
+                
+                janelasParaCriar.push({
+                    dataHoraInicio: slotAtualUTC,
+                    dataHoraFim: slotFimUTC,
+                    profissionalId: profissional.id,
+                });
+                slotAtualUTC = slotFimUTC;
+            }
         }
-      }
-      diaAtual.setUTCDate(diaAtual.getUTCDate() + 1);
+        diaAtual.setUTCDate(diaAtual.getUTCDate() + 1);
     }
 
     if (janelasParaCriar.length === 0) {
       throw new AppError(400, "Nenhum horário de trabalho encontrado no período especificado.");
-    }    
-  
+    }
+    
     return prisma.janelaDeAtendimento.createMany({
       data: janelasParaCriar,
       skipDuplicates: true,
     });
-  },
-
+},
 
 };
 

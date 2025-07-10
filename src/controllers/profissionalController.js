@@ -93,6 +93,27 @@ const profissionalController = {
       next(err);
     }
   },
+
+  listarDisponibilidade: async (req, res, next) => {
+    try {
+      const { id: profissionalId } = req.params;
+      // A data virá como um parâmetro na URL, ex: ?data=2025-07-25
+      const { data } = req.query; 
+
+      if (!data) {
+        throw new AppError(400, 'A data é obrigatória para consultar a disponibilidade.');
+      }
+
+      const disponibilidade = await profissionalService.listarDisponibilidadePorDia({
+        profissionalId,
+        data,
+      });
+
+      res.json(disponibilidade);
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 export default profissionalController;

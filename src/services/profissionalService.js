@@ -118,6 +118,27 @@ const profissionalService = {
       await tx.usuario.delete({ where: { id: profissional.usuarioId } });
     });
   },
+
+  listarDisponibilidadePorDia: async ({ profissionalId, data }) => {
+    const dataInicio = new Date(`${data}T00:00:00.000Z`);
+    const dataFim = new Date(`${data}T23:59:59.999Z`);
+
+  
+    const janelasDisponiveis = await prisma.janelaDeAtendimento.findMany({
+      where: {
+        profissionalId: profissionalId,
+        status: 'LIVRE',
+        dataHoraInicio: {
+          gte: dataInicio,
+          lte: dataFim,
+        },
+      },
+      orderBy: { dataHoraInicio: 'asc' },
+      select: { id: true, dataHoraInicio: true, dataHoraFim: true }
+    });
+  
+    return janelasDisponiveis;
+  },
 };
 
 export default profissionalService;

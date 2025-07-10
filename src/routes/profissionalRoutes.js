@@ -72,4 +72,10 @@ router.delete(
   profissionalController.deletar
 );
 
+// --- ROTA NOVA E PÚBLICA PARA VER DISPONIBILIDADE ---
+router.get(
+  '/:id/disponibilidade',
+  profissionalController.listarDisponibilidade
+);
+
 export default router;
