@@ -154,11 +154,10 @@ model Profissional {
   usuarioId String  @unique
 
   // Relações: O que um profissional "tem" e "faz" no sistema
-  consultas        Consultas[]
-  horariosPadrao   HorarioPadrao[]
-  janelasAtendimento JanelaDeAtendimento[]
-  bloqueios        BloqueioHorario[]
-  internacoes      Internacao[]
+  gradeHoraria       GradeHoraria[]
+  indisponibilidades Indisponibilidade[]
+  consultas          Consultas[]
+  internacoes        Internacao[]
   entradasProntuario EntradaProntuario[]
 }
 
@@ -175,65 +174,41 @@ model Administrador {
 
 // --- ÁREA DE AGENDAMENTO E CONSULTAS ---
 
-model HorarioPadrao {
-  id                    String    @id @default(uuid())
-  diaDaSemana           Int       // 0: Domingo, 1: Segunda, ..., 6: Sábado
-  horaInicio            String    // Formato "HH:MM"
-  horaFim               String    // Formato "HH:MM"
-  duracaoConsultaMinutos Int       @default(30)
-
-  // Conexão: A quem pertence este horário padrão
-  profissional   Profissional @relation(fields: [profissionalId], references: [id])
-  profissionalId String
+model GradeHoraria {
+  id                       String @id @default(uuid())
+  diaDaSemana              Int
+  horaInicio               String
+  horaFim                  String
+  duracaoConsultaMinutos   Int    @default(30)
+  profissional             Profissional @relation(fields: [profissionalId], references: [id])
+  profissionalId           String
 }
 
-model JanelaDeAtendimento {
-  id             String                  @id @default(uuid())
-  dataHoraInicio DateTime
-  dataHoraFim    DateTime
-  status         StatusJanelaAtendimento @default(LIVRE)
-
-  // Conexão: A quem pertence esta janela de horário
+model Indisponibilidade {
+  id             String     @id @default(uuid())
+  inicio         DateTime
+  fim            DateTime
+  motivo         String?
   profissional   Profissional @relation(fields: [profissionalId], references: [id])
   profissionalId String
-
-  // Conexão: Qual consulta preencheu esta janela
-  consulta Consultas?
-
-  @@unique([profissionalId, dataHoraInicio]) // Um profissional só pode ter uma janela por horário de início
 }
 
 model Consultas {
   id             String         @id @default(uuid())
+  dataHoraInicio DateTime
+  dataHoraFim    DateTime
   statusConsulta StatusConsulta @default(AGENDADA)
   dataCriacao    DateTime       @default(now())
   dataUpdate     DateTime       @updatedAt
 
-  // Conexão: Quem está na consulta
   paciente       Paciente     @relation(fields: [pacienteId], references: [id])
   pacienteId     String
   profissional   Profissional @relation(fields: [profissionalId], references: [id])
   profissionalId String
 
-  // Conexão: Qual janela de atendimento esta consulta ocupou
-  janelaDeAtendimento   JanelaDeAtendimento @relation(fields: [janelaDeAtendimentoId], references: [id])
-  janelaDeAtendimentoId String              @unique
-
-  // Conexão: Qual anotação no prontuário esta consulta gerou
   entradaProntuario EntradaProntuario?
+  @@unique([profissionalId, dataHoraInicio])
 }
-
-// Adicionado modelo para bloqueios de horário
-model BloqueioHorario {
-  id              String   @id @default(uuid())
-  inicio          DateTime
-  fim             DateTime
-  motivo          String?
-
-  profissional   Profissional @relation(fields: [profissionalId], references: [id])
-  profissionalId String
-}
-
 
 // --- ÁREA DE INTERNAÇÃO E LEITOS ---
 
