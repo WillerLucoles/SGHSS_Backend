@@ -1,44 +1,66 @@
 // src/services/consultaService.js
-
-
 import prisma from '../config/prismaClient.js';
 import AppError from '../utils/AppError.js';
+import profissionalService from './profissionalService.js'; 
 
-// --- FUNÇÕES DO SERVIÇO ---
-export async function criar(data) {
-  const { profissionalId, dataConsulta, horario } = data;
-  const diaSemana = new Date(dataConsulta).getDay();
+const consultaService = {
+  agendarNovaConsulta: async ({ usuarioId, profissionalId, dataHoraInicio }) => {
+    // 1. Encontrar o perfil do paciente
+    const paciente = await prisma.paciente.findUnique({
+      where: { usuarioId },
+      select: { id: true },
+    });
+    if (!paciente) throw new AppError(404, 'Perfil de paciente não encontrado.');
 
-  const disp = await prisma.disponibilidadeProfissional.findFirst({
-    where: {
+    // 2. Usar a nossa própria lógica para verificar a disponibilidade
+    const dataString = new Date(dataHoraInicio).toISOString().split('T')[0];
+    const disponibilidade = await profissionalService.listarDisponibilidadePorDia({
       profissionalId,
-      diaSemana,
-      inicio: { lte: horario },
-      fim: { gte: horario },
-    },
-  });
-  if (!disp) {
-    throw new AppError(
-      400,
-      'Profissional não atende no dia/horário solicitado'
+      data: dataString,
+    });
+
+    const horarioSolicitado = new Date(dataHoraInicio);
+
+    const horarioDisponivel = disponibilidade.some(
+      (horario) => horario.getTime() === horarioSolicitado.getTime()
     );
-  }
 
-  const conflito = await prisma.consulta.findFirst({
-    where: {
-      profissionalId,
-      dataConsulta,
-      horario,
-    },
-  });
-  if (conflito) {
-    throw new AppError(409, 'Horário já reservado para outro paciente');
-  }
+    if (!horarioDisponivel) {
+      throw new AppError(409, 'Este horário não está disponível para agendamento. Pode já ter sido reservado.');
+    }
+    
+    // 3. Obter a duração da consulta
+    const profissional = await prisma.profissional.findUnique({
+        where: { id: profissionalId },
+        include: { gradeHoraria: true }
+    });
+    if (!profissional) throw new AppError(404, 'Profissional não encontrado.');
+    
+    const diaDaSemana = horarioSolicitado.getUTCDay();
+    const gradeDoDia = profissional.gradeHoraria.find(g => g.diaDaSemana === diaDaSemana);
+    const duracao = gradeDoDia ? gradeDoDia.duracaoConsultaMinutos : 30;
 
-  return prisma.consulta.create({ data });
-}
+    const dataHoraFim = new Date(horarioSolicitado.getTime() + duracao * 60000);
 
-export async function listarTodos() {
-  return prisma.consulta.findMany();
-}
+    // 4. Criar a consulta
+    try {
+        const novaConsulta = await prisma.consultas.create({
+            data: {
+              pacienteId: paciente.id,
+              profissionalId: profissionalId,
+              dataHoraInicio: horarioSolicitado,
+              dataHoraFim: dataHoraFim,
+              statusConsulta: 'AGENDADA',
+            },
+        });
+        return novaConsulta;
+    } catch (error) {
+        if (error.code === 'P2002') {
+            throw new AppError(409, 'Conflito de agendamento. Este horário foi reservado no último segundo.');
+        }
+        throw error;
+    }
+  },
+};
 
+export default consultaService;
