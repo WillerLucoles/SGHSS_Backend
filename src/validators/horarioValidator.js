@@ -9,3 +9,15 @@ const gradeHorariaSchema = z.object({
 });
 
 export const criarGradeSemanalSchema = z.array(gradeHorariaSchema);
+
+
+const indisponibilidadeSchema = z.object({
+  inicio: z.string().datetime({ message: 'A data de início deve estar no formato ISO 8601.' }),
+  fim: z.string().datetime({ message: 'A data de fim deve estar no formato ISO 8601.' }),
+  motivo: z.string().min(3).optional(),
+}).refine(data => new Date(data.fim) > new Date(data.inicio), {
+  message: 'A data de fim deve ser posterior à data de início.',
+  path: ['fim'],
+});
+
+export const criarIndisponibilidadesSchema = z.array(indisponibilidadeSchema);

@@ -17,6 +17,26 @@ const horarioController = {
       next(err);
     }
   },
+
+  criarIndisponibilidades: async (req, res, next) => {
+    try {
+      const usuarioId = req.usuario.id;
+      const listaDeIndisponibilidades = req.body;!
+
+      await horarioService.criarIndisponibilidades(
+        usuarioId,
+        listaDeIndisponibilidades
+      );
+
+      res.status(201).json({ message: 'Indisponibilidades criadas com sucesso.' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+
 };
+
+
 
 export default horarioController;

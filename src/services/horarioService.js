@@ -32,5 +32,27 @@ const horarioService = {
       }),
     ]);
   },
+
+  criarIndisponibilidades: async (usuarioId, listaDeIndisponibilidades) => {
+    const profissional = await prisma.profissional.findUnique({
+      where: { usuarioId },
+      select: { id: true },
+    });
+    if (!profissional) {
+      throw new AppError(404, 'Perfil de profissional não encontrado.');
+    }
+
+    // Prepara os dados para a criação em lote, adicionando o profissionalId a cada um
+    const dadosParaCriar = listaDeIndisponibilidades.map(ind => ({
+      ...ind,
+      profissionalId: profissional.id,
+    }));
+
+    // Usa o createMany para inserir todos os registos de uma só vez, de forma eficiente
+    await prisma.indisponibilidade.createMany({
+      data: dadosParaCriar,
+    });
+  },
+
 };
 export default horarioService;

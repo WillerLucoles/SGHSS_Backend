@@ -3,7 +3,7 @@ import express from 'express';
 import authMiddleware from '../middlewares/authMiddleware.js';
 import authorize from '../middlewares/authorize.js';
 import validate from '../middlewares/validate.js';
-import { criarGradeSemanalSchema } from '../validators/horarioValidator.js';
+import { criarGradeSemanalSchema, criarIndisponibilidadesSchema } from '../validators/horarioValidator.js';
 import horarioController from '../controllers/horarioController.js';
 
 const router = express.Router();
@@ -15,6 +15,16 @@ router.post(
   validate(criarGradeSemanalSchema),
   horarioController.definirGradeSemanal
 );
+
+router.post(
+  '/indisponibilidades',
+  authMiddleware,
+  authorize(['PROFISSIONAL']),
+  validate(criarIndisponibilidadesSchema),
+  horarioController.criarIndisponibilidades
+);
+
+
 
 
 export default router;
