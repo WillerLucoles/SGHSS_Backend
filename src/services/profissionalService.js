@@ -120,24 +120,57 @@ const profissionalService = {
   },
 
   listarDisponibilidadePorDia: async ({ profissionalId, data }) => {
-    const dataInicio = new Date(`${data}T00:00:00.000Z`);
-    const dataFim = new Date(`${data}T23:59:59.999Z`);
-
-  
-    const janelasDisponiveis = await prisma.janelaDeAtendimento.findMany({
-      where: {
-        profissionalId: profissionalId,
-        status: 'LIVRE',
-        dataHoraInicio: {
-          gte: dataInicio,
-          lte: dataFim,
-        },
+    // 1. Encontrar o profissional, as suas grades horárias e indisponibilidades
+    const profissional = await prisma.profissional.findUnique({
+      where: { id: profissionalId },
+      include: {
+        gradeHoraria: true,
+        indisponibilidades: true,
+        consultas: true,
       },
-      orderBy: { dataHoraInicio: 'asc' },
-      select: { id: true, dataHoraInicio: true, dataHoraFim: true }
     });
-  
-    return janelasDisponiveis;
+    if (!profissional) throw new AppError(404, 'Profissional não encontrado.');
+
+    const dataAlvo = new Date(`${data}T00:00:00.000Z`);
+    const diaDaSemana = dataAlvo.getUTCDay();
+
+    // 2. Encontrar a grade horária para o dia da semana solicitado
+    const gradeDoDia = profissional.gradeHoraria.find(
+      (g) => g.diaDaSemana === diaDaSemana
+    );
+    if (!gradeDoDia) return []; // Se não trabalha, retorna vazio
+
+    // 3. Criar a "agenda virtual" do dia
+    const slotsDoDia = [];
+    const { horaInicio, horaFim, duracaoConsultaMinutos } = gradeDoDia;
+    const diaString = dataAlvo.toISOString().split('T')[0];
+    
+    let slotAtualUTC = new Date(`${diaString}T${horaInicio}:00.000Z`);
+    const fimDoTrabalhoUTC = new Date(`${diaString}T${horaFim}:00.000Z`);
+
+    while (slotAtualUTC < fimDoTrabalhoUTC) {
+      slotsDoDia.push(new Date(slotAtualUTC));
+      slotAtualUTC.setUTCMinutes(slotAtualUTC.getUTCMinutes() + duracaoConsultaMinutos);
+    }
+    
+    // 4. Filtrar os slots que já estão ocupados
+    const horariosLivres = slotsDoDia.filter(slot => {
+      // Verifica se o slot está dentro de uma indisponibilidade (almoço, reunião)
+      const estaIndisponivel = profissional.indisponibilidades.some(ind => 
+        slot >= ind.inicio && slot < ind.fim
+      );
+      if (estaIndisponivel) return false;
+
+      // Verifica se já existe uma consulta agendada para este slot
+      const temConsulta = profissional.consultas.some(consulta => 
+        consulta.dataHoraInicio.getTime() === slot.getTime()
+      );
+      if (temConsulta) return false;
+
+      return true;
+    });
+
+    return horariosLivres;
   },
 };
 

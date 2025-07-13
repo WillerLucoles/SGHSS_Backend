@@ -1,50 +1,22 @@
 // src/controllers/horarioController.js
-
 import horarioService from '../services/horarioService.js';
 
 const horarioController = {
-  definirHorario: async (req, res, next) => {
-    try {
-      
-      const usuarioId = req.usuario.id;  
-
-      const dadosHorario = req.body;
-      
-      const novoHorario = await horarioService.definirHorarioPadrao(
-        usuarioId,
-        dadosHorario
-      );
-
-      res.status(201).json(novoHorario);
-    } catch (err) {
-
-      next(err);
-    }
-  },
-
-  gerarAgenda: async (req, res, next) => {
+  definirGradeSemanal: async (req, res, next) => {
     try {
       const usuarioId = req.usuario.id;
-      const { dataInicio, dataFim } = req.body;
+      const gradesDaSemana = req.body;
 
-      const resultado = await horarioService.gerarJanelasDeAtendimento({
+      await horarioService.definirGradeSemanal(
         usuarioId,
-        dataInicio,
-        dataFim,
-      });
+        gradesDaSemana
+      );
 
-      res.status(201).json({
-        message: 'Agenda gerada com sucesso!',
-        totalJanelasCriadas: resultado.count,
-      });
+      res.status(201).json({ message: 'Grade horária semanal definida com sucesso.' });
     } catch (err) {
       next(err);
     }
   },
-
-
 };
-
-
 
 export default horarioController;
