@@ -61,6 +61,43 @@ const consultaService = {
         throw error;
     }
   },
+  
+  cancelarConsulta: async ({ consultaId, usuarioId, motivo, canceladoPor }) => {
+    // 1. Encontrar a consulta que se quer cancelar
+    const consulta = await prisma.consultas.findUnique({
+      where: { id: consultaId },
+    });
+    if (!consulta) throw new AppError(404, 'Consulta não encontrada.');
+
+    // 2. VERIFICAÇÃO DE SEGURANÇA
+    if (canceladoPor === 'PACIENTE') {
+      const paciente = await prisma.paciente.findFirst({ where: { usuarioId } });
+      if (consulta.pacienteId !== paciente?.id) {
+        throw new AppError(403, 'Você não tem permissão para cancelar esta consulta.');
+      }
+    } else if (canceladoPor === 'PROFISSIONAL') {
+      const profissional = await prisma.profissional.findFirst({ where: { usuarioId } });
+      if (consulta.profissionalId !== profissional?.id) {
+        throw new AppError(403, 'Você não tem permissão para cancelar esta consulta.');
+      }
+    }
+
+    // 3. VERIFICAÇÃO DE LÓGICA
+    if (consulta.statusConsulta !== 'AGENDADA') {
+      throw new AppError(409, `Não é possível cancelar uma consulta com status "${consulta.statusConsulta}".`);
+    }
+
+    // 4. Se tudo estiver OK, atualiza a consulta
+    const novoStatus = canceladoPor === 'PACIENTE' ? 'CANCELADA_PACIENTE' : 'CANCELADA_PROFISSIONAL';
+    
+    return prisma.consultas.update({
+      where: { id: consultaId },
+      data: {
+        statusConsulta: novoStatus,
+        motivoCancelamento: motivo,
+      },
+    });
+  },  
 };
 
 export default consultaService;

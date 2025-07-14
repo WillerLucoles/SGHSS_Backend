@@ -4,7 +4,7 @@ import consultaController from '../controllers/consultaController.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
 import authorize from '../middlewares/authorize.js';
 import validate from '../middlewares/validate.js';
-import { agendarConsultaSchema } from '../validators/consultaValidator.js';
+import { agendarConsultaSchema, cancelarConsultaSchema } from '../validators/consultaValidator.js';
 
 const router = express.Router();
 
@@ -18,11 +18,20 @@ router.post(
 );
 
 router.patch(
-  '/:id/cancelar',
+  '/:id/cancelamento-consulta-via-paciente',
   authMiddleware,
-  authorize(['PACIENTE']), // Apenas um paciente pode tentar cancelar
+  authorize(['PACIENTE']),
   validate(cancelarConsultaSchema),
-  consultaController.cancelar
+  consultaController.cancelarPeloPaciente
+);
+
+
+router.patch(
+  '/:id/cancelamento-consulta-via-profissional',
+  authMiddleware,
+  authorize(['PROFISSIONAL']),
+  validate(cancelarConsultaSchema),
+  consultaController.cancelarPeloProfissional
 );
 
 export default router;
