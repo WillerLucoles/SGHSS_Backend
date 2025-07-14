@@ -1,18 +1,40 @@
 // src/services/consultaService.js
+
 import prisma from '../config/prismaClient.js';
 import AppError from '../utils/AppError.js';
-import profissionalService from './profissionalService.js'; 
+import profissionalService from './profissionalService.js';
 
 const consultaService = {
-  agendarNovaConsulta: async ({ usuarioId, profissionalId, dataHoraInicio }) => {
-    // 1. Encontrar o perfil do paciente
-    const paciente = await prisma.paciente.findUnique({
-      where: { usuarioId },
-      select: { id: true },
-    });
-    if (!paciente) throw new AppError(404, 'Perfil de paciente não encontrado.');
+  /**
+   * Agenda uma nova consulta de forma flexível.
+   * Pode ser chamada por um paciente (usando o seu `usuarioId` do token)
+   * ou por um profissional (fornecendo o `pacienteId` diretamente no corpo da requisição).
+   * @param {object} dados - Dados do agendamento.
+   * @param {string} [dados.usuarioId] - O ID do usuário (paciente) que está logado.
+   * @param {string} [dados.pacienteId] - O ID do paciente para quem a consulta está a ser marcada (usado pelo profissional).
+   * @param {string} dados.profissionalId - O ID do profissional com quem se quer agendar.
+   * @param {string} dados.dataHoraInicio - O horário exato do slot escolhido em formato ISO 8601 UTC.
+   * @returns {Promise<object>} A nova consulta criada.
+   */
+  agendarNovaConsulta: async (dados) => {
+    // Desestrutura todos os possíveis dados que a função pode receber
+    const { usuarioId, pacienteId: pacienteIdDoBody, profissionalId, dataHoraInicio } = dados;
+    let pacienteIdFinal = pacienteIdDoBody;
 
-    // 2. Usar a nossa própria lógica para verificar a disponibilidade
+    // 1. DETERMINAR O PACIENTE CORRETO
+    if (usuarioId) {
+      const paciente = await prisma.paciente.findUnique({
+        where: { usuarioId },
+        select: { id: true },
+      });
+      if (!paciente) throw new AppError(404, 'Perfil de paciente não encontrado para este utilizador.');
+      pacienteIdFinal = paciente.id;
+    }
+    if (!pacienteIdFinal) {
+        throw new AppError(400, 'ID do paciente não foi fornecido ou não foi encontrado.');
+    }
+
+    // 2. VERIFICAR A DISPONIBILIDADE DO HORÁRIO
     const dataString = new Date(dataHoraInicio).toISOString().split('T')[0];
     const disponibilidade = await profissionalService.listarDisponibilidadePorDia({
       profissionalId,
@@ -20,7 +42,6 @@ const consultaService = {
     });
 
     const horarioSolicitado = new Date(dataHoraInicio);
-
     const horarioDisponivel = disponibilidade.some(
       (horario) => horario.getTime() === horarioSolicitado.getTime()
     );
@@ -28,8 +49,8 @@ const consultaService = {
     if (!horarioDisponivel) {
       throw new AppError(409, 'Este horário não está disponível para agendamento. Pode já ter sido reservado.');
     }
-    
-    // 3. Obter a duração da consulta
+
+    // 3. CALCULAR A HORA DE FIM DA CONSULTA
     const profissional = await prisma.profissional.findUnique({
         where: { id: profissionalId },
         include: { gradeHoraria: true }
@@ -38,15 +59,16 @@ const consultaService = {
     
     const diaDaSemana = horarioSolicitado.getUTCDay();
     const gradeDoDia = profissional.gradeHoraria.find(g => g.diaDaSemana === diaDaSemana);
-    const duracao = gradeDoDia ? gradeDoDia.duracaoConsultaMinutos : 30;
+    const duracao = gradeDoDia ? gradeDoDia.duracaoConsultaMinutos : 30; 
 
     const dataHoraFim = new Date(horarioSolicitado.getTime() + duracao * 60000);
 
-    // 4. Criar a consulta
+    // 4. CRIAR A CONSULTA DE FORMA SEGURA
+    // A trava @@unique no schema impede agendamentos duplicados em caso de condições de corrida.
     try {
         const novaConsulta = await prisma.consultas.create({
             data: {
-              pacienteId: paciente.id,
+              pacienteId: pacienteIdFinal, // Usamos o ID final do paciente
               profissionalId: profissionalId,
               dataHoraInicio: horarioSolicitado,
               dataHoraFim: dataHoraFim,
@@ -55,6 +77,8 @@ const consultaService = {
         });
         return novaConsulta;
     } catch (error) {
+        // Captura o erro 'P2002' do Prisma, que acontece se houver uma tentativa de criar uma consulta
+        // para um horário que acabou de ser preenchido (conflito de chave única).
         if (error.code === 'P2002') {
             throw new AppError(409, 'Conflito de agendamento. Este horário foi reservado no último segundo.');
         }
@@ -62,14 +86,14 @@ const consultaService = {
     }
   },
   
+
   cancelarConsulta: async ({ consultaId, usuarioId, motivo, canceladoPor }) => {
-    // 1. Encontrar a consulta que se quer cancelar
     const consulta = await prisma.consultas.findUnique({
       where: { id: consultaId },
     });
     if (!consulta) throw new AppError(404, 'Consulta não encontrada.');
 
-    // 2. VERIFICAÇÃO DE SEGURANÇA
+    // Verificação de Segurança
     if (canceladoPor === 'PACIENTE') {
       const paciente = await prisma.paciente.findFirst({ where: { usuarioId } });
       if (consulta.pacienteId !== paciente?.id) {
@@ -82,14 +106,13 @@ const consultaService = {
       }
     }
 
-    // 3. VERIFICAÇÃO DE LÓGICA
+    // Verificação de Lógica
     if (consulta.statusConsulta !== 'AGENDADA') {
       throw new AppError(409, `Não é possível cancelar uma consulta com status "${consulta.statusConsulta}".`);
     }
 
-    // 4. Se tudo estiver OK, atualiza a consulta
+    // Atualização
     const novoStatus = canceladoPor === 'PACIENTE' ? 'CANCELADA_PACIENTE' : 'CANCELADA_PROFISSIONAL';
-    
     return prisma.consultas.update({
       where: { id: consultaId },
       data: {

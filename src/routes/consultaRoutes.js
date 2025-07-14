@@ -4,7 +4,7 @@ import consultaController from '../controllers/consultaController.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
 import authorize from '../middlewares/authorize.js';
 import validate from '../middlewares/validate.js';
-import { agendarConsultaSchema, cancelarConsultaSchema } from '../validators/consultaValidator.js';
+import { agendarConsultaSchema, cancelarConsultaSchema, agendarPeloProfissionalSchema } from '../validators/consultaValidator.js';
 
 const router = express.Router();
 
@@ -15,6 +15,14 @@ router.post(
   authorize(['PACIENTE']),
   validate(agendarConsultaSchema),
   consultaController.agendar
+);
+
+router.post(
+  '/agendamento-por-profissional',
+  authMiddleware,
+  authorize(['PROFISSIONAL']),
+  validate(agendarPeloProfissionalSchema),
+  consultaController.agendarPeloProfissional
 );
 
 router.patch(

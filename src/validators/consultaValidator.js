@@ -2,7 +2,13 @@
 import { z } from 'zod';
 
 export const agendarConsultaSchema = z.object({
-  profissionalId: z.string().uuid({ message: 'O ID do profissional deve ser um UUID válido.' }),
+  profissionalId: z.string().uuid({ message: 'O ID do profissional deve ser válido.' }),
+  dataHoraInicio: z.string().datetime({ message: 'A data e hora de início devem estar no formato ISO 8601.' }),
+});
+
+export const agendarPeloProfissionalSchema = z.object({
+  pacienteId: z.string().uuid({ message: 'O ID do paciente deve ser válido.' }),
+  profissionalId: z.string().uuid({ message: 'O ID do profissional deve ser válido.' }),
   dataHoraInicio: z.string().datetime({ message: 'A data e hora de início devem estar no formato ISO 8601.' }),
 });
 

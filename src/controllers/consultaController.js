@@ -19,6 +19,17 @@ const consultaController = {
     }
   },
 
+  agendarPeloProfissional: async (req, res, next) => {
+    try {
+      const dadosAgendamento = req.body;
+      const novaConsulta = await consultaService.agendarNovaConsulta(dadosAgendamento);
+
+      res.status(201).json(novaConsulta);
+    } catch (err) {
+      next(err);
+    }
+  },  
+
     cancelarPeloPaciente: async (req, res, next) => {
     try {
       const { id: consultaId } = req.params;
