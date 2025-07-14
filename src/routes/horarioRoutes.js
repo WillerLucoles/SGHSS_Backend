@@ -24,6 +24,13 @@ router.post(
   horarioController.criarIndisponibilidades
 );
 
+router.get(
+  '/minha-agenda',
+  authMiddleware,
+  authorize(['PROFISSIONAL']),
+  horarioController.listarMinhaAgenda
+);
+
 
 
 
