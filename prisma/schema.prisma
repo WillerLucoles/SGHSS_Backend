@@ -198,6 +198,7 @@ model Consultas {
   dataHoraInicio DateTime
   dataHoraFim    DateTime
   statusConsulta StatusConsulta @default(AGENDADA)
+  motivoCancelamento String?
   dataCriacao    DateTime       @default(now())
   dataUpdate     DateTime       @updatedAt
 

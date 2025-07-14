@@ -17,4 +17,12 @@ router.post(
   consultaController.agendar
 );
 
+router.patch(
+  '/:id/cancelar',
+  authMiddleware,
+  authorize(['PACIENTE']), // Apenas um paciente pode tentar cancelar
+  validate(cancelarConsultaSchema),
+  consultaController.cancelar
+);
+
 export default router;
