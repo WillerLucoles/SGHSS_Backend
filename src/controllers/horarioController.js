@@ -37,22 +37,25 @@ const horarioController = {
   listarMinhaAgenda: async (req, res, next) => {
     try {
       const usuarioId = req.usuario.id;
-      const { data } = req.query;
+      // Extraímos dataInicio e dataFim da query string da URL
+      const { dataInicio, dataFim } = req.query;
 
-      if (!data) {
-        throw new AppError(400, 'O parâmetro de data é obrigatório.');
+      // Validação básica
+      if (!dataInicio || !dataFim) {
+        throw new AppError(400, 'Os parâmetros de dataInicio и dataFim são obrigatórios.');
       }
 
-      const agendaDoDia = await horarioService.listarAgendaProfissionalPorDia(
+      const agendaCompleta = await horarioService.listarAgendaProfissionalPorPeriodo({
         usuarioId,
-        data
-      );
+        dataInicio,
+        dataFim,
+      });
 
-      res.json(agendaDoDia);
+      res.json(agendaCompleta);
     } catch (err) {
       next(err);
     }
-  },  
+  },
 
 
 };

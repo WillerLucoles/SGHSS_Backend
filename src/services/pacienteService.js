@@ -5,6 +5,7 @@ import AppError from '../utils/AppError.js';
 import bcrypt from 'bcryptjs';
 
 const pacienteService = {
+  // --- FUNÇÃO DE REGISTO PÚBLICO ---
   registrarNovoPaciente: async (dadosPaciente) => {
     const { email, senha, cpf, ...outrosDadosPaciente } = dadosPaciente;
 
@@ -27,6 +28,49 @@ const pacienteService = {
     });
   },
 
+  // --- FUNÇÕES DO PORTAL DO PACIENTE (/me) ---
+  buscarPorUsuarioId: async (usuarioId) => {
+    const paciente = await prisma.paciente.findUnique({
+      where: { usuarioId },
+      include: { usuario: { select: { email: true } } },
+    });
+    if (!paciente) {
+        throw new AppError(404, 'Perfil de paciente não encontrado para este utilizador.');
+    }
+    return paciente;
+  },
+
+  atualizarMeuPerfil: async (usuarioId, dadosParaAtualizar) => {
+    const paciente = await prisma.paciente.findUnique({
+      where: { usuarioId },
+      select: { id: true },
+    });
+    if (!paciente) {
+      throw new AppError(404, 'Perfil de paciente não encontrado para este utilizador.');
+    }
+    return prisma.paciente.update({
+      where: { id: paciente.id },
+      data: dadosParaAtualizar,
+    });
+  },
+
+  listarConsultasPorPaciente: async (usuarioId) => {
+    const paciente = await prisma.paciente.findUnique({ where: { usuarioId } });
+    if (!paciente) {
+      throw new AppError(404, 'Perfil de paciente não encontrado.');
+    }
+    return prisma.consultas.findMany({
+      where: { pacienteId: paciente.id },
+      orderBy: { dataHoraInicio: 'desc' },
+      include: {
+        profissional: {
+          select: { nome: true, especialidadePrincipal: true },
+        },
+      },
+    });
+  },
+
+  // --- FUNÇÕES ADMINISTRATIVAS ---
   listarTodos: async () => {
     return prisma.paciente.findMany({
       select: { id: true, nome: true, cpf: true, tipoCliente: true },
@@ -34,10 +78,14 @@ const pacienteService = {
   },
 
   buscarPorId: async (id) => {
-    return prisma.paciente.findUnique({
+    const paciente = await prisma.paciente.findUnique({
       where: { id },
       include: { usuario: { select: { email: true } } },
     });
+    if (!paciente) {
+        throw new AppError(404, 'Paciente com o ID especificado não encontrado.');
+    }
+    return paciente;
   },
 
   atualizar: async (id, dados) => {
@@ -52,71 +100,10 @@ const pacienteService = {
     if (!paciente) throw new AppError(404, 'Paciente não encontrado para exclusão.');
 
     return prisma.$transaction(async (tx) => {
-        await tx.paciente.delete({ where: { id } });
-        await tx.usuario.delete({ where: { id: paciente.usuarioId } });
+      await tx.paciente.delete({ where: { id } });
+      await tx.usuario.delete({ where: { id: paciente.usuarioId } });
     });
   },
-  
-  buscarPorUsuarioId: async (usuarioId) => {
-    return prisma.paciente.findUnique({
-      where: { usuarioId: usuarioId },
-      include: { usuario: { select: { email: true } } },
-    });
-  },
-
-  atualizarMeuPerfil: async (usuarioId, dadosParaAtualizar) => {
-    // Verifica se o usuário é um paciente
-    const paciente = await prisma.paciente.findUnique({
-      where: { usuarioId: usuarioId },
-      select: { id: true }
-    });
-
-    if (!paciente) {
-      throw new AppError(404, 'Perfil de paciente não encontrado para este utilizador.');
-    }
-
-    const pacienteAtualizado = await prisma.paciente.update({
-      where: { id: paciente.id },
-      data: dadosParaAtualizar,
-    });
-
-    return pacienteAtualizado;
-  },
-
-  listarConsultasPorUsuario: async (usuarioId) => {
-    // Encontrar o perfil do paciente para obter o seu ID de paciente
-    const paciente = await prisma.paciente.findUnique({
-      where: { usuarioId: usuarioId },
-      select: { id: true },
-    });
-
-    if (!paciente) {
-      throw new AppError(404, 'Perfil de paciente não encontrado para este utilizador.');
-    }
-
-    // Buscar todas as consultas associadas a este ID de paciente
-    const consultas = await prisma.consultas.findMany({
-      where: {
-        pacienteId: paciente.id,
-      },
-      include: {
-        profissional: {
-          select: {
-            nome: true,
-            especialidadePrincipal: true,
-          },
-        },
-      },
-      orderBy: {
-        janelaDeAtendimento: {
-          dataHoraInicio: 'desc',
-        },
-      },
-    });
-
-    return consultas;
-  },
-
 };
 
 export default pacienteService;

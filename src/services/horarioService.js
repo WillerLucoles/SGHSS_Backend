@@ -54,82 +54,100 @@ const horarioService = {
     });
   },
 
-    listarAgendaProfissionalPorDia: async (usuarioId, data) => {
-    // 1. Encontrar o profissional, as suas grades, indisponibilidades e consultas
+  listarAgendaProfissionalPorPeriodo: async ({ usuarioId, dataInicio, dataFim }) => {
+    // 1. Encontrar o profissional
+    const dataInicioPeriodo = new Date(`${dataInicio}T00:00:00.000Z`);
+    const dataFimPeriodo = new Date(`${dataFim}T23:59:59.999Z`);
+
     const profissional = await prisma.profissional.findUnique({
       where: { usuarioId },
       include: {
         gradeHoraria: true,
-        indisponibilidades: true,
+        // Filtrar na base de dados
+        indisponibilidades: {
+          where: {
+            // A indisponibilidade cruza com o período solicitado?
+            inicio: { lte: dataFimPeriodo },
+            fim: { gte: dataInicioPeriodo },
+          },
+        },
         consultas: {
-          include: { // Incluímos os dados do paciente na consulta
-            paciente: {
-              select: { nome: true }
-            }
-          }
+          where: {
+            dataHoraInicio: {
+              gte: dataInicioPeriodo,
+              lte: dataFimPeriodo,
+            },
+            statusConsulta: 'AGENDADA',
+          },
+          include: {
+            paciente: { select: { nome: true } },
+          },
         },
       },
     });
+
     if (!profissional) throw new AppError(404, 'Profissional não encontrado.');
 
-    const dataAlvo = new Date(`${data}T00:00:00.000Z`);
-    const diaDaSemana = dataAlvo.getUTCDay();
+    const agendaCompleta = [];
+    let diaAtual = new Date(dataInicioPeriodo);
 
-    // 2. Encontrar o horário de trabalho para aquele dia
-    const gradeDoDia = profissional.gradeHoraria.find(g => g.diaDaSemana === diaDaSemana);
-    if (!gradeDoDia) return []; // Se não trabalha no dia, retorna agenda vazia
+    // 2. Loop por cada dia no intervalo solicitado
+    while (diaAtual <= dataFimPeriodo) {
+      const diaDaSemana = diaAtual.getUTCDay();
+      const gradeDoDia = profissional.gradeHoraria.find(g => g.diaDaSemana === diaDaSemana);
 
-    // 3. Gerar todos os slots possíveis para o dia
-    const slotsDoDia = [];
-    const { horaInicio, horaFim, duracaoConsultaMinutos } = gradeDoDia;
-    const diaString = dataAlvo.toISOString().split('T')[0];
-    
-    let slotAtualUTC = new Date(`${diaString}T${horaInicio}:00.000Z`);
-    const fimDoTrabalhoUTC = new Date(`${diaString}T${horaFim}:00.000Z`);
+      if (gradeDoDia) {
+        const slotsDoDia = [];
+        const { horaInicio, horaFim, duracaoConsultaMinutos } = gradeDoDia;
+        const diaString = diaAtual.toISOString().split('T')[0];
+        
+        let slotAtualUTC = new Date(`${diaString}T${horaInicio}:00.000Z`);
+        const fimDoTrabalhoUTC = new Date(`${diaString}T${horaFim}:00.000Z`);
 
-    while (slotAtualUTC < fimDoTrabalhoUTC) {
-      slotsDoDia.push(new Date(slotAtualUTC));
-      slotAtualUTC.setUTCMinutes(slotAtualUTC.getUTCMinutes() + duracaoConsultaMinutos);
+        while (slotAtualUTC < fimDoTrabalhoUTC) {
+          slotsDoDia.push(new Date(slotAtualUTC));
+          slotAtualUTC.setUTCMinutes(slotAtualUTC.getUTCMinutes() + duracaoConsultaMinutos);
+        }
+
+        const agendaDoDia = slotsDoDia.map(slot => {
+          const horario = {
+            horario: slot.toISOString(),
+            status: 'LIVRE',
+            info: null,
+          };
+
+          const consultaAgendada = profissional.consultas.find(c => 
+            c.dataHoraInicio.getTime() === slot.getTime()
+          );
+          if (consultaAgendada) {
+            horario.status = 'AGENDADO';
+            horario.info = { consultaId: consultaAgendada.id, paciente: consultaAgendada.paciente.nome };
+            return horario;
+          }
+
+          const indisponibilidade = profissional.indisponibilidades.find(i => 
+            slot >= i.inicio && slot < i.fim
+          );
+          if (indisponibilidade) {
+            horario.status = 'BLOQUEADO';
+            horario.info = { motivo: indisponibilidade.motivo || 'Bloqueado' };
+            return horario;
+          }
+
+          return horario;
+        });
+        
+        if (agendaDoDia.length > 0) {
+          agendaCompleta.push({
+            data: diaAtual.toISOString().split('T')[0],
+            horarios: agendaDoDia,
+          });
+        }
+      }
+      diaAtual.setUTCDate(diaAtual.getUTCDate() + 1);
     }
-
-    // 4. Mapear cada slot para o seu status e informação correspondente
-    const agendaCompleta = slotsDoDia.map(slot => {
-      const horario = {
-        horario: slot.toISOString(),
-        status: 'LIVRE',
-        info: null,
-      };
-
-      // Verifica se há uma consulta agendada
-      const consultaAgendada = profissional.consultas.find(
-        c => c.dataHoraInicio.getTime() === slot.getTime() && c.statusConsulta === 'AGENDADA'
-      );
-      if (consultaAgendada) {
-        horario.status = 'AGENDADO';
-        horario.info = {
-          consultaId: consultaAgendada.id,
-          paciente: consultaAgendada.paciente.nome,
-        };
-        return horario;
-      }
-
-      // Verifica se há um bloqueio
-      const indisponibilidade = profissional.indisponibilidades.find(
-        i => slot >= i.inicio && slot < i.fim
-      );
-      if (indisponibilidade) {
-        horario.status = 'BLOQUEADO';
-        horario.info = {
-          motivo: indisponibilidade.motivo || 'Bloqueado',
-        };
-        return horario;
-      }
-
-      return horario;
-    });
 
     return agendaCompleta;
   },
-
 };
 export default horarioService;
