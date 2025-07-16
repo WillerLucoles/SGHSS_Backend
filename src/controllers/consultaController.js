@@ -67,6 +67,24 @@ const consultaController = {
       next(err);
     }
   },
+
+  salvarRegistroClinico: async (req, res, next) => {
+    try {
+      const { id: consultaId } = req.params;
+      const usuarioId = req.usuario.id;
+      const dadosDoRegistro = req.body;
+
+      const registroSalvo = await consultaService.salvarRegistroClinico({
+        consultaId,
+        usuarioId,
+        dadosDoRegistro,
+      });
+
+      res.status(200).json(registroSalvo);
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 export default consultaController;

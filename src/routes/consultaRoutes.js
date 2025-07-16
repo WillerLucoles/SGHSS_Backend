@@ -5,6 +5,7 @@ import authMiddleware from '../middlewares/authMiddleware.js';
 import authorize from '../middlewares/authorize.js';
 import validate from '../middlewares/validate.js';
 import { agendarConsultaSchema, cancelarConsultaSchema, agendarPeloProfissionalSchema } from '../validators/consultaValidator.js';
+import { salvarRegistroSchema } from '../validators/registroClinicoValidator.js';
 
 const router = express.Router();
 
@@ -40,6 +41,14 @@ router.patch(
   authorize(['PROFISSIONAL']),
   validate(cancelarConsultaSchema),
   consultaController.cancelarPeloProfissional
+);
+
+router.put(
+  '/:id/registro-clinico', // Usamos PUT para criar ou substituir o registro da consulta
+  authMiddleware,
+  authorize(['PROFISSIONAL']),
+  validate(salvarRegistroSchema),
+  consultaController.salvarRegistroClinico
 );
 
 export default router;

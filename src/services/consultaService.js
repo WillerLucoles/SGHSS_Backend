@@ -120,7 +120,66 @@ const consultaService = {
         motivoCancelamento: motivo,
       },
     });
-  },  
+  },
+  
+  salvarRegistroClinico: async ({ consultaId, usuarioId, dadosDoRegistro }) => {
+    const { anexos, ...dadosPrincipais } = dadosDoRegistro;
+
+    // 1. Validar a consulta e a permissão do profissional
+    const consulta = await prisma.consultas.findFirst({
+      where: { 
+        id: consultaId,
+        profissional: {
+            usuarioId: usuarioId
+        }
+      },
+    });
+    if (!consulta) {
+      throw new AppError(404, 'Consulta não encontrada ou você não tem permissão para editá-la.');
+    }
+
+    // 2. Usar uma transação para garantir que tudo aconteça de uma vez
+    return prisma.$transaction(async (tx) => {
+      // Usamos 'upsert': se o registro não existe, ele cria; se existe, atualiza.
+      const registro = await tx.registroClinico.upsert({
+        where: { consultaId: consultaId },
+        update: { ...dadosPrincipais },
+        create: {
+          ...dadosPrincipais,
+          consultaId: consultaId,
+          profissionalId: consulta.profissionalId,
+        },
+      });
+
+      // 3. Lidar com os anexos simulados
+      if (anexos && anexos.length > 0) {
+        // Primeiro, apaga os anexos antigos para evitar duplicatas
+        await tx.anexoClinico.deleteMany({
+          where: { registroClinicoId: registro.id },
+        });
+        // Depois, cria os novos
+        await tx.anexoClinico.createMany({
+          data: anexos.map(anexo => ({
+            ...anexo,
+            urlArquivoSimulado: `/uploads/simulado/${anexo.nomeArquivo}`,
+            registroClinicoId: registro.id,
+          })),
+        });
+      }
+      
+      // 4. Mudar o status da consulta para REALIZADA
+       await tx.consultas.update({
+        where: { id: consultaId },
+        data: { statusConsulta: 'REALIZADA' },
+      });
+
+      // 5. Retornar o registro clínico completo
+      return tx.registroClinico.findUnique({
+        where: { id: registro.id },
+        include: { anexos: true },
+      });
+    });
+  },
 };
 
 export default consultaService;
