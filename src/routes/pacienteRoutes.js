@@ -24,5 +24,11 @@ router.get('/me/consultas', authMiddleware, authorize(['PACIENTE']), pacienteCon
 router.get('/:id', authMiddleware, authorize(['ADMINISTRADOR', 'PROFISSIONAL']), pacienteController.buscarPorId);
 router.put('/:id', authMiddleware, pacienteController.atualizar);
 router.delete('/:id', authMiddleware, pacienteController.deletar);
+router.get(
+  '/:id/historico-clinico',
+  authMiddleware,
+  authorize(['PROFISSIONAL', 'ADMINISTRADOR']),
+  pacienteController.buscarHistoricoClinico
+);
 
 export default router;

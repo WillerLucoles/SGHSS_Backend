@@ -98,6 +98,16 @@ const pacienteController = {
       next(err);
     }
   },
+
+  buscarHistoricoClinico: async (req, res, next) => {
+    try {
+      const { id: pacienteId } = req.params;
+      const historico = await pacienteService.buscarHistoricoClinico(pacienteId);
+      res.json(historico);
+    } catch (err) {
+      next(err);
+    }
+  },
   
 };
 

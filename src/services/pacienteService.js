@@ -63,11 +63,66 @@ const pacienteService = {
       where: { pacienteId: paciente.id },
       orderBy: { dataHoraInicio: 'desc' },
       include: {
+        // Dados do profissional
         profissional: {
           select: { nome: true, especialidadePrincipal: true },
         },
+        // Registro clínico associado...
+        registroClinico: {
+          select: {
+            // Apenas os campos que o paciente pode ver
+            queixa: true,
+            conduta: true,
+            observacoesAdicionais: true,
+            // Lista de anexos simulados
+            anexos: {
+              select: {
+                nomeArquivo: true,
+                tipoDocumento: true,
+                urlArquivoSimulado: true,
+              }
+            }
+          }
+        }
       },
     });
+  },
+
+  buscarHistoricoClinico: async (pacienteId) => {
+    // 1. Verificar se o paciente existe
+    const paciente = await prisma.paciente.findUnique({
+      where: { id: pacienteId },
+    });
+    if (!paciente) {
+      throw new AppError(404, 'Paciente não encontrado.');
+    }
+
+    // 2. Buscar todas as consultas do paciente que foram realizadas
+    const consultasRealizadas = await prisma.consultas.findMany({
+      where: {
+        pacienteId: pacienteId,
+        statusConsulta: 'REALIZADA',
+      },
+      orderBy: {
+        dataHoraInicio: 'desc',
+      },
+      include: {
+        // Para cada consulta, trazemos o registro clínico completo...
+        registroClinico: {
+          include: {
+            anexos: true,
+          },
+        },
+        profissional: {
+          select: {
+            nome: true,
+            especialidadePrincipal: true,
+          },
+        },
+      },
+    });
+
+    return consultasRealizadas;
   },
 
   // --- FUNÇÕES ADMINISTRATIVAS ---
@@ -104,6 +159,8 @@ const pacienteService = {
       await tx.usuario.delete({ where: { id: paciente.usuarioId } });
     });
   },
+
+
 };
 
 export default pacienteService;
