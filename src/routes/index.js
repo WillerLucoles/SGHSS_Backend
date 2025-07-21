@@ -7,6 +7,7 @@ import profissionalRoutes from './profissionalRoutes.js';
 import usuarioRoutes from './usuarioRoutes.js';
 import horarioRoutes from './horarioRoutes.js';
 import quartoRoutes from './quartoRoutes.js';
+import leitoRoutes from './leitoRoutes.js';
 
 const router = express.Router();
 
@@ -16,5 +17,6 @@ router.use('/pacientes', pacienteRoutes);
 router.use('/profissionais', profissionalRoutes);
 router.use('/horarios', horarioRoutes);
 router.use('/quartos', quartoRoutes);
+router.use('/leitos', leitoRoutes);
 
 export default router;

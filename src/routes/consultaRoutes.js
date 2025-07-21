@@ -44,7 +44,7 @@ router.patch(
 );
 
 router.put(
-  '/:id/registro-clinico', // Usamos PUT para criar ou substituir o registro da consulta
+  '/:id/registro-clinico',
   authMiddleware,
   authorize(['PROFISSIONAL']),
   validate(salvarRegistroSchema),

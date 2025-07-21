@@ -37,7 +37,6 @@ const horarioController = {
   listarMinhaAgenda: async (req, res, next) => {
     try {
       const usuarioId = req.usuario.id;
-      // Extraímos dataInicio e dataFim da query string da URL
       const { dataInicio, dataFim } = req.query;
 
       // Validação básica

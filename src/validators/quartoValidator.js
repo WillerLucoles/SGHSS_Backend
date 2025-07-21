@@ -12,9 +12,12 @@ const CategoriaQuartoEnum = z.enum([
 // Schema para criar um novo quarto
 export const criarQuartoSchema = z.object({
   numeroQuarto: z.string().min(1, "O número do quarto é obrigatório."),
-  categoria: CategoriaQuartoEnum,
+  categoria: z
+    .string()
+    .transform(val => val.toUpperCase())
+    .pipe(CategoriaQuartoEnum),
+
   capacidade: z.number().int().positive("A capacidade deve ser um número inteiro positivo."),
 });
 
-// Schema para atualizar um quarto
 export const atualizarQuartoSchema = criarQuartoSchema.partial();

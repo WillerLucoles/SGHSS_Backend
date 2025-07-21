@@ -12,7 +12,7 @@ const authMiddleware = (req, res, next) => {
     return next(new AppError(401, 'Token de autenticação não fornecido.'));
   }
 
-  // O token vem no formato "Bearer <token>". Vamos separar as duas partes.
+  // O token vem no formato "Bearer <token>".
   const parts = authHeader.split(' ');
   if (parts.length !== 2 || parts[0] !== 'Bearer') {
     return next(new AppError(401, 'Token mal formatado.'));
@@ -26,7 +26,7 @@ const authMiddleware = (req, res, next) => {
     // Se o token for inválido ou expirado, ele vai lançar um erro.
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 4. Se o token for válido, adicionamos os dados do usuário (id e role) ao objeto 'req'.
+    // 4. Se o token for válido, adiciona os dados do usuário (id e role) ao objeto 'req'.
     // Isso permite que os próximos middlewares e controllers saibam quem é o usuário logado.
     req.usuario = { id: decoded.id, role: decoded.role };
 
