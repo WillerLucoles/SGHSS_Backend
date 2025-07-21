@@ -8,6 +8,13 @@ import { criarLeitoSchema, atualizarLeitoSchema } from '../validators/leitoValid
 
 const router = express.Router();
 
+router.get(
+  '/status',
+  authMiddleware,
+  authorize(['ADMINISTRADOR', 'PROFISSIONAL']),
+  leitoController.listarStatus
+);
+
 // A gestão de leitos é, na sua maioria, administrativa
 router.use(authMiddleware, authorize(['ADMINISTRADOR']));
 

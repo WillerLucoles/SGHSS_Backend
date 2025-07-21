@@ -46,6 +46,18 @@ const leitoController = {
       next(err);
     }
   },
+  
+  listarStatus: async (req, res, next) => {
+    try {
+      // O filtro de categoria virá como um parâmetro de query opcional
+      const { categoria } = req.query;
+      const panoramaDosLeitos = await leitoService.obterStatusDeLeitos(categoria);
+      res.json(panoramaDosLeitos);
+    } catch (err) {
+      next(err);
+    }
+  },
+
 };
 
 export default leitoController;
