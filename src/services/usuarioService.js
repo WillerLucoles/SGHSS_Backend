@@ -5,9 +5,19 @@ import AppError from '../utils/AppError.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
+/**
+ * Serviço responsável pela autenticação e operações relacionadas ao usuário.
+ * Inclui login e geração de token JWT.
+ */
 const usuarioService = {
+  /**
+   * Realiza o login do usuário, validando email e senha.
+   * @param {Object} params - { email, senha }
+   * @throws {AppError} Se o email não existir ou a senha estiver incorreta.
+   * @returns {Promise<Object>} Objeto contendo o token JWT e os dados do usuário (sem a senha).
+   */
   login: async ({ email, senha }) => {
-    // 1. Encontrar o usuário pelo email no banco
+    // Busca o usuário pelo email
     const usuario = await prisma.usuario.findUnique({
       where: { email },
     });
@@ -17,22 +27,21 @@ const usuarioService = {
       throw new AppError(401, 'Email ou senha inválidos.');
     }
 
-    // 2. Comparar a senha enviada com a senha criptografada (hash) no banco
+    // Compara a senha enviada com a senha criptografada (hash) no banco
     const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
 
     if (!senhaCorreta) {
       throw new AppError(401, 'Email ou senha inválidos.');
     }
 
-    // 3. Se a senha estiver correta, gerar o token JWT
-    // O token conterá o ID do usuário e o seu papel (role).
+    // Gera o token JWT contendo o ID do usuário e o seu papel (role)
     const token = jwt.sign(
       { id: usuario.id, role: usuario.role },
-      process.env.JWT_SECRET, // Uma chave secreta que só o nosso servidor conhece
-      { expiresIn: '8h' } // Define a validade do token (ex: 8 horas)
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
     );
 
-    // Removemos a senha do objeto de usuário antes de retorná-lo
+    // Remove a senha do objeto de usuário antes de retorná-lo
     delete usuario.senha;
 
     return { token, usuario };

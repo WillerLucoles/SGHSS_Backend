@@ -2,9 +2,20 @@
 import prisma from '../config/prismaClient.js';
 import AppError from '../utils/AppError.js';
 
+/**
+ * Serviço responsável pela gestão de horários e agendas dos profissionais.
+ * Permite definir grade semanal, criar indisponibilidades e listar agenda detalhada por período.
+ */
 const horarioService = {
+  /**
+   * Define a grade semanal de horários de um profissional.
+   * Substitui todas as grades existentes pelas novas fornecidas.
+   * @param {number} usuarioId - ID do usuário autenticado.
+   * @param {Array} gradesDaSemana - Lista de objetos representando a grade semanal.
+   * @throws {AppError} Se o profissional não for encontrado.
+   */
   definirGradeSemanal: async (usuarioId, gradesDaSemana) => {
-    // 1. Encontrar o profissional associado ao utilizador logado
+    // Busca o profissional pelo usuário logado
     const profissional = await prisma.profissional.findUnique({
       where: { usuarioId },
       select: { id: true },
@@ -13,26 +24,29 @@ const horarioService = {
       throw new AppError(404, 'Perfil de profissional não encontrado.');
     }
 
-    // 2. Prepara os dados para a criação em lote, adicionando o profissionalId a cada um
+    // Prepara os dados para criação em lote, vinculando ao profissional
     const dadosParaCriar = gradesDaSemana.map(grade => ({
       ...grade,
       profissionalId: profissional.id,
     }));
 
-    // 3. Substituir Tudo: apaga as grades antigas e insere as novas.
-    // Tudo dentro de uma transação para garantir que, se algo falhar, nada é alterado.
+    // Transação: remove grades antigas e insere as novas
     await prisma.$transaction([
-      // Passo A: Apaga TODAS as grades horárias existentes para este profissional
       prisma.gradeHoraria.deleteMany({
         where: { profissionalId: profissional.id },
       }),
-      // Passo B: Cria as novas grades horárias em lote
       prisma.gradeHoraria.createMany({
         data: dadosParaCriar,
       }),
     ]);
   },
 
+  /**
+   * Cria registros de indisponibilidade para um profissional.
+   * @param {number} usuarioId - ID do usuário autenticado.
+   * @param {Array} listaDeIndisponibilidades - Lista de indisponibilidades.
+   * @throws {AppError} Se o profissional não for encontrado.
+   */
   criarIndisponibilidades: async (usuarioId, listaDeIndisponibilidades) => {
     const profissional = await prisma.profissional.findUnique({
       where: { usuarioId },
@@ -42,31 +56,36 @@ const horarioService = {
       throw new AppError(404, 'Perfil de profissional não encontrado.');
     }
 
-    // Prepara os dados para a criação em lote, adicionando o profissionalId a cada um
+    // Prepara os dados para criação em lote
     const dadosParaCriar = listaDeIndisponibilidades.map(ind => ({
       ...ind,
       profissionalId: profissional.id,
     }));
 
-    // Usa o createMany para inserir todos os registos de uma só vez, de forma eficiente
     await prisma.indisponibilidade.createMany({
       data: dadosParaCriar,
     });
   },
 
+  /**
+   * Lista a agenda completa do profissional para um período.
+   * Inclui horários livres, agendados e bloqueados (indisponibilidades).
+   * @param {Object} params - Parâmetros de busca (usuarioId, dataInicio, dataFim).
+   * @returns {Promise<Array>} Agenda detalhada por dia.
+   * @throws {AppError} Se o profissional não for encontrado.
+   */
   listarAgendaProfissionalPorPeriodo: async ({ usuarioId, dataInicio, dataFim }) => {
-    // 1. Encontrar o profissional
+    // Define o período de busca
     const dataInicioPeriodo = new Date(`${dataInicio}T00:00:00.000Z`);
     const dataFimPeriodo = new Date(`${dataFim}T23:59:59.999Z`);
 
+    // Busca o profissional e suas relações relevantes
     const profissional = await prisma.profissional.findUnique({
       where: { usuarioId },
       include: {
         gradeHoraria: true,
-        // Filtrar na base de dados
         indisponibilidades: {
           where: {
-            // A indisponibilidade cruza com o período solicitado?
             inicio: { lte: dataFimPeriodo },
             fim: { gte: dataInicioPeriodo },
           },
@@ -91,7 +110,7 @@ const horarioService = {
     const agendaCompleta = [];
     let diaAtual = new Date(dataInicioPeriodo);
 
-    // 2. Loop por cada dia no intervalo solicitado
+    // Gera a agenda para cada dia do período solicitado
     while (diaAtual <= dataFimPeriodo) {
       const diaDaSemana = diaAtual.getUTCDay();
       const gradeDoDia = profissional.gradeHoraria.find(g => g.diaDaSemana === diaDaSemana);
@@ -100,15 +119,17 @@ const horarioService = {
         const slotsDoDia = [];
         const { horaInicio, horaFim, duracaoConsultaMinutos } = gradeDoDia;
         const diaString = diaAtual.toISOString().split('T')[0];
-        
+
         let slotAtualUTC = new Date(`${diaString}T${horaInicio}:00.000Z`);
         const fimDoTrabalhoUTC = new Date(`${diaString}T${horaFim}:00.000Z`);
 
+        // Gera todos os slots do dia conforme a grade
         while (slotAtualUTC < fimDoTrabalhoUTC) {
           slotsDoDia.push(new Date(slotAtualUTC));
           slotAtualUTC.setUTCMinutes(slotAtualUTC.getUTCMinutes() + duracaoConsultaMinutos);
         }
 
+        // Mapeia cada slot para seu status (livre, agendado, bloqueado)
         const agendaDoDia = slotsDoDia.map(slot => {
           const horario = {
             horario: slot.toISOString(),
@@ -116,7 +137,8 @@ const horarioService = {
             info: null,
           };
 
-          const consultaAgendada = profissional.consultas.find(c => 
+          // Consulta agendada para o slot
+          const consultaAgendada = profissional.consultas.find(c =>
             c.dataHoraInicio.getTime() === slot.getTime()
           );
           if (consultaAgendada) {
@@ -125,7 +147,8 @@ const horarioService = {
             return horario;
           }
 
-          const indisponibilidade = profissional.indisponibilidades.find(i => 
+          // Indisponibilidade no slot
+          const indisponibilidade = profissional.indisponibilidades.find(i =>
             slot >= i.inicio && slot < i.fim
           );
           if (indisponibilidade) {
@@ -136,7 +159,7 @@ const horarioService = {
 
           return horario;
         });
-        
+
         if (agendaDoDia.length > 0) {
           agendaCompleta.push({
             data: diaAtual.toISOString().split('T')[0],
@@ -150,4 +173,5 @@ const horarioService = {
     return agendaCompleta;
   },
 };
+
 export default horarioService;
