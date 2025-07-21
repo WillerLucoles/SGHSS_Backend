@@ -71,6 +71,14 @@ enum StatusInternacao {
   CONCLUIDA_OBITO
 }
 
+enum CategoriaQuarto {
+  MASCULINO
+  FEMININO
+  PEDIATRICO
+  ISOLAMENTO
+  UTI_GERAL
+}
+
 // =====================
 // 3. Modelos (Tabelas do Banco de Dados)
 // =====================
@@ -196,56 +204,63 @@ model Consultas {
   @@unique([profissionalId, dataHoraInicio])
 }
 
-// --- ÁREA DE INTERNAÇÃO E LEITOS ---
+// --- ÁREA DE ADMINISTRAÇÃO HOSPITALAR ---
 
 model Quarto {
-  id            String   @id @default(uuid())
-  numeroQuarto  String   @unique
-  tipo          TipoQuarto
-  capacidade    Int
-  leitos        Leito[]
+  id           String          @id @default(uuid())
+  numeroQuarto String          @unique
+  categoria    CategoriaQuarto
+  capacidade   Int
+  leitos       Leito[]
 }
 
 model Leito {
-  id                String       @id @default(uuid())
+  id                 String      @id @default(uuid())
   identificacaoLeito String
-  status            StatusLeito  @default(LIVRE)
-  quarto            Quarto       @relation(fields: [quartoId], references: [id])
-  quartoId          String
-  internacao        Internacao?
-  @@unique([quartoId, identificacaoLeito]) // A identificação do leito é única por quarto
+  status             StatusLeito @default(LIVRE)
+  quarto             Quarto      @relation(fields: [quartoId], references: [id])
+  quartoId           String
+  internacao         Internacao?
+  @@unique([quartoId, identificacaoLeito])
 }
 
 model Internacao {
-  id                        String           @id @default(uuid())
-  dataEntrada               DateTime
-  dataPrevistaAlta          DateTime?
-  dataEfetivaAlta           DateTime?
-  status                    StatusInternacao @default(ATIVA)
-  paciente                  Paciente         @relation(fields: [pacienteId], references: [id])
-  pacienteId                String           @unique // Um paciente só pode ter uma internação ativa por vez
-  leito                     Leito            @relation(fields: [leitoId], references: [id])
-  leitoId                   String           @unique // Um leito só pode ter uma internação por vez
-  profissionalResponsavel   Profissional     @relation(fields: [profissionalId], references: [id])
-  profissionalId            String
+  id                      String           @id @default(uuid())
+  dataEntrada             DateTime
+  dataPrevistaAlta        DateTime?
+  dataEfetivaAlta         DateTime?
+  status                  StatusInternacao @default(ATIVA)
+  paciente                Paciente         @relation(fields: [pacienteId], references: [id])
+  pacienteId              String           @unique
+  leito                   Leito            @relation(fields: [leitoId], references: [id])
+  leitoId                 String           @unique
+  profissionalResponsavel Profissional     @relation(fields: [profissionalId], references: [id])
+  profissionalId          String
+  registrosClinicos       RegistroClinico[]
 }
+
 
 // --- ÁREA DE DOCUMENTAÇÃO CLÍNICA (PRONTUÁRIOS) ---
 
 model RegistroClinico {
-  id                      String   @id @default(uuid())
-  consultaId              String   @unique
-  consulta                Consultas @relation(fields: [consultaId], references: [id])
-  profissionalId          String
-  profissional            Profissional @relation(fields: [profissionalId], references: [id])
+  id        String @id @default(uuid())
+  consultaId String?    @unique
+  consulta   Consultas? @relation(fields: [consultaId], references: [id])
+
+  internacaoId String?    // Campo novo
+  internacao   Internacao? @relation(fields: [internacaoId], references: [id])
+  
+  profissionalId String
+  profissional   Profissional @relation(fields: [profissionalId], references: [id])
   queixa                  String   @db.Text
   exameFisico             String?  @db.Text
   hipotesesDiagnosticas   String?  @db.Text
   conduta                 String?  @db.Text
   observacoesAdicionais   String?  @db.Text
-  anexos                  AnexoClinico[]
-  createdAt               DateTime     @default(now())
-  updatedAt               DateTime     @updatedAt
+
+  anexos    AnexoClinico[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 }
 
 model AnexoClinico {
