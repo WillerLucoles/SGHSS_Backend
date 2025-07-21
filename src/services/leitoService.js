@@ -5,7 +5,7 @@ import AppError from '../utils/AppError.js';
 
 /**
  * Serviço responsável pelas operações relacionadas a leitos hospitalares.
- * Inclui regras de negócio para criação, listagem, atualização, exclusão e consulta de status.
+ * Implementa regras de negócio para criação, listagem, atualização, exclusão e consulta de status dos leitos.
  */
 const leitoService = {
   /**
@@ -20,14 +20,26 @@ const leitoService = {
       where: { id: dados.quartoId },
       include: { _count: { select: { leitos: true } } },
     });
+
     if (!quarto) {
       throw new AppError(404, 'Quarto não encontrado para associar o leito.');
     }
+
+    // Valida se a capacidade máxima do quarto já foi atingida.
     if (quarto._count.leitos >= quarto.capacidade) {
       throw new AppError(409, 'A capacidade máxima do quarto já foi atingida.');
     }
-    // Cria o leito se as regras forem atendidas.
-    return prisma.leito.create({ data: dados });
+
+    try {
+      // Cria o leito se as regras forem atendidas.
+      return await prisma.leito.create({ data: dados });
+    } catch (error) {
+      // Trata erro de unicidade para identificação do leito no quarto.
+      if (error.code === 'P2002' && error.meta?.target?.includes('identificacaoLeito')) {
+        throw new AppError(409, 'A identificação para este leito já existe neste quarto.');
+      }
+      throw error;
+    }
   },
 
   /**
@@ -36,7 +48,15 @@ const leitoService = {
    */
   listarTodos: async () => {
     return prisma.leito.findMany({
-      include: { quarto: { select: { numeroQuarto: true, categoria: true } } },
+      include: {
+        quarto: {
+          select: {
+            numeroQuarto: true,
+            categoria: true,
+            capacidade: true,
+          },
+        },
+      },
     });
   },
 
@@ -51,6 +71,7 @@ const leitoService = {
       where: { id },
       include: { quarto: true },
     });
+
     if (!leito) {
       throw new AppError(404, 'Leito não encontrado.');
     }
@@ -68,6 +89,7 @@ const leitoService = {
     try {
       return await prisma.leito.update({ where: { id }, data: dados });
     } catch (error) {
+      // Trata erro de não encontrado.
       if (error.code === 'P2025') {
         throw new AppError(404, 'Leito não encontrado para atualização.');
       }
@@ -82,14 +104,18 @@ const leitoService = {
    * @returns {Promise<Object>} Leito removido.
    */
   deletar: async (id) => {
-    // Regra de negócio: não se pode apagar um leito que está ocupado.
+    // Busca o leito para garantir existência e status.
     const leito = await prisma.leito.findUnique({ where: { id } });
+
     if (!leito) {
       throw new AppError(404, 'Leito não encontrado para exclusão.');
     }
+
+    // Regra de negócio: não se pode apagar um leito que está ocupado.
     if (leito.status === 'OCUPADO') {
       throw new AppError(409, 'Não é possível apagar um leito que está atualmente ocupado.');
     }
+
     return prisma.leito.delete({ where: { id } });
   },
 
@@ -104,9 +130,7 @@ const leitoService = {
 
     // Aplica filtro por categoria, se fornecido.
     if (categoria) {
-      whereClause.quarto = {
-        categoria: categoria,
-      };
+      whereClause.quarto = { categoria };
     }
 
     // Busca leitos, quartos e internações ativas associadas.
@@ -120,28 +144,19 @@ const leitoService = {
           },
         },
         internacao: {
-          where: {
-            status: 'ATIVA',
-          },
+          where: { status: 'ATIVA' },
           include: {
-            paciente: {
-              select: {
-                nome: true,
-              },
-            },
+            paciente: { select: { nome: true } },
           },
         },
       },
       orderBy: {
-        quarto: {
-          numeroQuarto: 'asc'
-        }
-      }
+        quarto: { numeroQuarto: 'asc' },
+      },
     });
 
     // Mapeia o resultado para o formato esperado pelo frontend.
-    const panorama = leitos.map(leito => {
-      // Garante que só acessa a internação ativa se existir.
+    return leitos.map(leito => {
       const internacaoAtiva = leito.internacao && leito.internacao.length > 0
         ? leito.internacao[0]
         : null;
@@ -151,17 +166,16 @@ const leitoService = {
         identificacaoLeito: leito.identificacaoLeito,
         status: leito.status,
         quarto: leito.quarto,
-        internacaoAtual: internacaoAtiva ? {
-          paciente: internacaoAtiva.paciente.nome,
-          dataEntrada: internacaoAtiva.dataEntrada,
-          dataPrevistaAlta: internacaoAtiva.dataPrevistaAlta,
-        } : null,
+        internacaoAtual: internacaoAtiva
+          ? {
+              paciente: internacaoAtiva.paciente.nome,
+              dataEntrada: internacaoAtiva.dataEntrada,
+              dataPrevistaAlta: internacaoAtiva.dataPrevistaAlta,
+            }
+          : null,
       };
     });
-
-    return panorama;
   },
-
 };
 
 export default leitoService;
