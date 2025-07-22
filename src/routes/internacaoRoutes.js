@@ -23,4 +23,10 @@ router.post(
   internacaoController.adicionarRegistro
 );
 
+router.patch(
+  '/:id/alta',
+  // A autorização já está aplicada a todas as rotas neste ficheiro
+  internacaoController.darAlta
+);
+
 export default router;

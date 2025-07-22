@@ -29,6 +29,18 @@ const internacaoController = {
       next(err);
     }
   }, 
+
+  darAlta: async (req, res, next) => {
+    try {
+      const { id: internacaoId } = req.params;
+
+      const internacaoFinalizada = await internacaoService.darAlta(internacaoId);
+
+      res.json(internacaoFinalizada);
+    } catch (err) {
+      next(err);
+    }
+  },  
 };
 
 export default internacaoController;

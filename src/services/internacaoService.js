@@ -136,6 +136,46 @@ const internacaoService = {
       });
     });
   },
+
+  /**
+   * Dá alta a uma internação ativa, atualizando o status da internação e do leito.
+   * @param {number} internacaoId - ID da internação a ser finalizada.
+   * @throws {AppError} Se a internação não existir ou não estiver ativa.
+   * @returns {Promise<Object>} Internação atualizada após a alta.
+   */
+  darAlta: async (internacaoId) => {
+    // 1. Encontrar a internação para garantir que ela existe e está ativa
+    const internacao = await prisma.internacao.findUnique({
+      where: { id: internacaoId },
+    });
+
+    if (!internacao) {
+      throw new AppError(404, 'Internação não encontrada.');
+    }
+    if (internacao.status !== 'ATIVA') {
+      throw new AppError(409, 'Esta internação já foi finalizada.');
+    }
+
+    // 2. Usar uma transação para garantir que ambas as atualizações aconteçam
+    return prisma.$transaction(async (tx) => {
+      // Passo A: Atualizar o status do leito para LIVRE (ou HIGIENIZACAO)
+      await tx.leito.update({
+        where: { id: internacao.leitoId },
+        data: { status: 'LIVRE' }, // Poderíamos mudar para 'HIGIENIZACAO'
+      });
+
+      // Passo B: Atualizar a internação com o status de alta e a data
+      const internacaoAtualizada = await tx.internacao.update({
+        where: { id: internacaoId },
+        data: {
+          status: 'CONCLUIDA_ALTA',
+          dataEfetivaAlta: new Date(), // Registamos o momento exato da alta
+        },
+      });
+
+      return internacaoAtualizada;
+    });
+  },
 };
 
 export default internacaoService;
