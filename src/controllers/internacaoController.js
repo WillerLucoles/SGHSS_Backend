@@ -11,6 +11,24 @@ const internacaoController = {
       next(err);
     }
   },
+
+  adicionarRegistro: async (req, res, next) => {
+    try {
+      const { id: internacaoId } = req.params;
+      const profissionalUsuarioId = req.usuario.id;
+      const dadosDoRegistro = req.body;
+
+      const novoRegistro = await internacaoService.adicionarRegistro({
+        internacaoId,
+        profissionalUsuarioId,
+        dadosDoRegistro,
+      });
+
+      res.status(201).json(novoRegistro);
+    } catch (err) {
+      next(err);
+    }
+  }, 
 };
 
 export default internacaoController;

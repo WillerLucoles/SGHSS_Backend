@@ -5,7 +5,7 @@ import AppError from '../utils/AppError.js';
 
 /**
  * Serviço responsável pelas operações de internação hospitalar.
- * Implementa regras de negócio para criação de internações, incluindo validações de compatibilidade de paciente, leito e profissional.
+ * Implementa regras de negócio para criação de internações, validações de compatibilidade e registros clínicos.
  */
 const internacaoService = {
   /**
@@ -36,7 +36,7 @@ const internacaoService = {
     // Validação de compatibilidade entre paciente e categoria do quarto.
     const categoriaQuarto = leito.quarto.categoria;
 
-    // Regra: Quartos masculinos/femininos só aceitam pacientes do mesmo gênero.
+    // Quartos masculinos/femininos só aceitam pacientes do mesmo gênero.
     if (categoriaQuarto === 'MASCULINO' && paciente.genero !== 'MASCULINO') {
       throw new AppError(409, 'Este quarto é destinado apenas a pacientes do sexo masculino.');
     }
@@ -44,7 +44,7 @@ const internacaoService = {
       throw new AppError(409, 'Este quarto é destinado apenas a pacientes do sexo feminino.');
     }
 
-    // Regra: Quartos pediátricos aceitam apenas menores de 18 anos.
+    // Quartos pediátricos aceitam apenas menores de 18 anos.
     if (categoriaQuarto === 'PEDIATRICO') {
       const hoje = new Date();
       const nascimento = new Date(paciente.dataNascimento);
@@ -82,6 +82,58 @@ const internacaoService = {
       });
 
       return novaInternacao;
+    });
+  },
+
+  /**
+   * Adiciona um registro clínico a uma internação ativa, com possibilidade de anexos.
+   * @param {Object} params - { internacaoId, profissionalUsuarioId, dadosDoRegistro }
+   * @throws {AppError} Se a internação não existir, não estiver ativa ou o profissional não existir.
+   * @returns {Promise<Object>} Registro clínico criado, incluindo anexos.
+   */
+  adicionarRegistro: async ({ internacaoId, profissionalUsuarioId, dadosDoRegistro }) => {
+    const { anexos, ...dadosPrincipais } = dadosDoRegistro;
+
+    // Valida existência da internação e se está ativa
+    const internacao = await prisma.internacao.findUnique({
+      where: { id: internacaoId },
+    });
+    if (!internacao) throw new AppError(404, 'Internação não encontrada.');
+    if (internacao.status !== 'ATIVA') {
+      throw new AppError(409, 'Só é possível adicionar registros a uma internação ativa.');
+    }
+
+    // Valida existência do profissional logado
+    const profissional = await prisma.profissional.findUnique({
+      where: { usuarioId: profissionalUsuarioId },
+    });
+    if (!profissional) throw new AppError(404, 'Profissional não encontrado.');
+
+    // Transação: cria o registro clínico e os anexos (se existirem)
+    return prisma.$transaction(async (tx) => {
+      const novoRegistro = await tx.registroClinico.create({
+        data: {
+          ...dadosPrincipais,
+          internacaoId: internacaoId,
+          profissionalId: profissional.id,
+        },
+      });
+
+      // Se houver anexos, cria os registros de anexo vinculados ao registro clínico
+      if (anexos && anexos.length > 0) {
+        const dadosAnexos = anexos.map(anexo => ({
+          ...anexo,
+          urlArquivoSimulado: `/uploads/simulado/${anexo.nomeArquivo.replace(/\s/g, '_')}`,
+          registroClinicoId: novoRegistro.id,
+        }));
+        await tx.anexoClinico.createMany({ data: dadosAnexos });
+      }
+
+      // Retorna o registro completo com os anexos para confirmação
+      return tx.registroClinico.findUnique({
+        where: { id: novoRegistro.id },
+        include: { anexos: true },
+      });
     });
   },
 };
