@@ -1,197 +1,84 @@
-# VIDAPLUS
-## SGHSS - Sistema de Gestão Hospitalar e Saúde Suplementar
+# SGHSS - Sistema de Gestão Hospitalar e de Serviços de Saúde
 
-## 📋 Sobre o Projeto
+> API Backend para um sistema de gestão hospitalar completo, desenvolvido como parte do projeto de programação do curso.
 
-O SGHSS é um sistema completo de gestão hospitalar desenvolvido em Node.js, projetado para facilitar o gerenciamento de pacientes, profissionais de saúde, consultas e prontuários médicos.
+## 📜 Sobre o Projeto
 
-## 🚀 Tecnologias Utilizadas
+O SGHSS é uma API RESTful robusta, desenvolvida em Node.js, que serve como a espinha dorsal para um sistema de gestão de saúde. A aplicação foi construída seguindo as melhores práticas de arquitetura de software, incluindo uma estrutura em camadas, autenticação baseada em tokens (JWT), e um sistema de agendamento dinâmico. O objetivo principal é fornecer uma base segura e escalável para a gestão de pacientes, profissionais, agendamentos, prontuários e infraestrutura hospitalar.
 
-- **Backend**: Node.js + Express.js
-- **Banco de Dados**: PostgreSQL
-- **ORM**: Prisma
-- **Autenticação**: JWT (JSON Web Tokens)
-- **Validação**: Express Validator + Zod
-- **Segurança**: Helmet, CORS, Rate Limiting
-- **Documentação**: Swagger/OpenAPI (em desenvolvimento)
+## ✨ Funcionalidades Principais
 
-## 📁 Estrutura do Projeto
+* **Autenticação e Autorização:** Sistema seguro de login com JWT e controlo de acesso baseado em papéis (Admin, Profissional, Paciente).
+* **Gestão de Pacientes:** CRUD completo para pacientes, incluindo um portal para o próprio paciente gerir o seu perfil e ver o seu histórico.
+* **Gestão de Profissionais:** CRUD completo para profissionais, gerido por administradores, e um portal para o profissional gerir o seu perfil.
+* **Sistema de Agenda Inteligente:**
+    * Profissionais podem definir a sua grade de trabalho semanal.
+    * A API calcula a disponibilidade em tempo real, considerando consultas já agendadas e bloqueios.
+    * Profissionais podem bloquear períodos (indisponibilidades) para almoço, reuniões, etc.
+* **Ciclo de Consultas Completo:** Pacientes podem agendar consultas em horários livres, e tanto pacientes como profissionais podem cancelar agendamentos.
+* **Módulo de Prontuários:** Profissionais podem criar registos clínicos detalhados para consultas e internações, com suporte para anexos (simulados).
+* **Módulo de Administração Hospitalar:** CRUD completo para gestão de quartos e leitos, e um fluxo para admissão e alta de pacientes em internações.
 
-```
-src/
-├── config/          # Configurações (banco, etc.)
-├── controllers/     # Controladores das rotas
-├── middleware/      # Middlewares customizados
-├── routes/          # Definição das rotas
-├── utils/           # Utilitários e helpers
-└── server.js        # Arquivo principal do servidor
+## 🛠️ Tecnologias Utilizadas
 
-prisma/
-├── schema.prisma    # Schema do banco de dados
-└── migrations/      # Migrações do banco
-```
+* **Backend:** Node.js, Express.js
+* **Base de Dados:** PostgreSQL
+* **ORM:** Prisma
+* **Validação:** Zod
+* **Autenticação:** JWT (JSON Web Tokens), bcryptjs
+* **Ambiente:** ES Modules
 
-## 🔧 Instalação e Configuração
+## 🚀 Como Executar o Projeto Localmente
 
-### Pré-requisitos
+Siga os passos abaixo para configurar e executar o projeto na sua máquina.
 
-- Node.js (versão 18 ou superior)
-- PostgreSQL
-- npm ou yarn
+### **Pré-requisitos**
 
-### Passos para instalação
+* [Node.js](https://nodejs.org/) (versão 20.x ou superior)
+* [PostgreSQL](https://www.postgresql.org/)
+* Um cliente de API como o [Postman](https://www.postman.com/) ou [Insomnia](https://insomnia.rest/)
 
-1. **Clone o repositório**
-```bash
-git clone <url-do-repositorio>
-cd sghss-api
-```
+### **Instalação**
 
-2. **Instale as dependências**
-```bash
-npm install
-```
+1.  **Clone o repositório:**
+    ```bash
+    git clone [https://github.com/WillerLucoles/SGHSS_Backend.git](https://github.com/WillerLucoles/SGHSS_Backend.git)
+    cd SGHSS_Backend
+    ```
 
-3. **Configure as variáveis de ambiente**
-```bash
-cp .env.example .env
-```
-Edite o arquivo `.env` com suas configurações.
+2.  **Instale as dependências:**
+    ```bash
+    npm install
+    ```
 
-4. **Configure o banco de dados**
-```bash
-# Gerar o cliente Prisma
-npm run db:generate
+3.  **Configure as Variáveis de Ambiente:**
+    * Crie uma cópia do ficheiro `.env.example` (se não existir, crie um `.env`) na raiz do projeto.
+    * Preencha as variáveis, especialmente a `DATABASE_URL`:
+        ```
+        DATABASE_URL="postgresql://SEU_USER:SUA_SENHA@localhost:5432/sghss_db?schema=public"
+        JWT_SECRET="SUA_CHAVE_SECRETA_AQUI"
+        SEED_ADMIN_EMAIL="admin@sghss.com"
+        SEED_ADMIN_SENHA="SuaSenhaDeAdminAqui"
+        ```
 
-# Executar migrações
-npm run db:migrate
+4.  **Aplique as Migrações da Base de Dados:**
+    Este comando irá criar as tabelas na sua base de dados com base no `schema.prisma`.
+    ```bash
+    npx prisma migrate dev
+    ```
 
-# (Opcional) Popular banco com dados de teste
-npm run db:seed
-```
+5.  **"Semeie" a Base de Dados (Crie o Admin):**
+    Este comando irá executar o nosso script de seeding para criar o utilizador administrador padrão.
+    ```bash
+    npx prisma db seed
+    ```
 
-5. **Inicie o servidor**
-```bash
-# Desenvolvimento
-npm run dev
+6.  **Inicie o Servidor:**
+    ```bash
+    npm run dev
+    ```
+    O servidor estará a ser executado em `http://localhost:3000`.
 
-# Produção
-npm start
-```
+## 📚 Endpoints da API
 
-## 📊 Modelo de Dados
-
-### Entidades Principais
-
-- **Usuario**: Dados básicos de autenticação
-- **Paciente**: Informações específicas dos pacientes
-- **Profissional**: Dados dos profissionais de saúde
-- **Consulta**: Agendamentos e consultas médicas
-- **Prontuario**: Histórico médico dos pacientes
-- **HorarioAtendimento**: Disponibilidade dos profissionais
-
-### Tipos de Usuário
-
-- **PACIENTE**: Pode agendar consultas e visualizar seu histórico
-- **PROFISSIONAL**: Pode gerenciar consultas e prontuários
-- **ADMINISTRADOR**: Acesso completo ao sistema
-
-## 🔐 Autenticação e Autorização
-
-O sistema utiliza JWT para autenticação e implementa controle de acesso baseado em roles:
-
-- Tokens JWT com expiração configurável
-- Middleware de autenticação para rotas protegidas
-- Autorização baseada no tipo de usuário
-- Logs de acesso para auditoria
-
-## 📡 API Endpoints
-
-### Autenticação
-- `POST /api/auth/login` - Login
-- `POST /api/auth/register` - Registro
-- `GET /api/auth/me` - Perfil do usuário
-- `POST /api/auth/logout` - Logout
-
-### Usuários
-- `GET /api/usuarios` - Listar usuários (Admin)
-- `GET /api/usuarios/:id` - Obter usuário
-- `PUT /api/usuarios/:id` - Atualizar usuário
-
-### Pacientes
-- `GET /api/pacientes` - Listar pacientes
-- `POST /api/pacientes` - Criar perfil de paciente
-- `GET /api/pacientes/:id` - Obter paciente
-- `PUT /api/pacientes/:id` - Atualizar paciente
-
-### Profissionais
-- `GET /api/profissionais` - Listar profissionais
-- `POST /api/profissionais` - Criar perfil de profissional
-- `GET /api/profissionais/:id/horarios` - Horários de atendimento
-
-### Consultas
-- `GET /api/consultas` - Listar consultas
-- `POST /api/consultas` - Agendar consulta
-- `PUT /api/consultas/:id` - Atualizar consulta
-- `PUT /api/consultas/:id/confirmar` - Confirmar consulta
-
-## 🛡️ Segurança
-
-- Senhas criptografadas com bcrypt
-- Rate limiting para prevenir ataques
-- Validação rigorosa de dados de entrada
-- Headers de segurança com Helmet
-- Logs de auditoria
-
-## 🧪 Testes
-
-```bash
-# Executar testes
-npm test
-
-# Executar testes em modo watch
-npm run test:watch
-```
-
-## 📈 Monitoramento
-
-- Health check endpoint: `GET /health`
-- Logs estruturados com Morgan
-- Métricas de performance (em desenvolvimento)
-
-## 🚀 Deploy
-
-### Desenvolvimento
-```bash
-npm run dev
-```
-
-### Produção
-```bash
-npm start
-```
-
-## 📝 Contribuição
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
-
-## 👥 Equipe
-
-- **Willer Lucoles** - Desenvolvedor Principal
-
-## 📞 Suporte
-
-Para suporte, entre em contato através do email: suporte@sghss.com
-
----
-
-**SGHSS** - Sistema de Gestão Hospitalar e Saúde Suplementar
-```
+A documentação completa de todos os endpoints, com exemplos de requisição e resposta, pode ser encontrada no ficheiro [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
