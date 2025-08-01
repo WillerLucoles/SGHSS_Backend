@@ -23,9 +23,9 @@
     "seed": "node prisma/seed.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon src/app.js",
-    "start": "node src/app.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate dev --name init",
     "prisma:studio": "npx prisma studio",
@@ -43,6 +43,11 @@
   },
   "homepage": "https://github.com/WillerLucoles/SGHSS_Backend#readme",
   "devDependencies": {
-    "nodemon": "^3.1.10"
-  }
+    "jest": "^30.0.5",
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.4"
+  },
+  "jest": {
+  "transform": {}
+}
 }

@@ -35,7 +35,4 @@ app.use((req, res, next) => {
 app.use(errorHandler);
 
 
-// --- INICIALIZAÇÃO DO SERVIDOR ---
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => logger.info(`Servidor rodando na porta ${PORT}`));
+export default app;
