@@ -3,7 +3,7 @@
 import request from 'supertest';
 import app from '../app';
 import { PrismaClient } from '@prisma/client';
-import { criarAdmin} from './utils/test-helpers';
+import { criarAdmin } from './utils/test-helpers';
 
 const prisma = new PrismaClient();
 
@@ -27,8 +27,22 @@ describe('API de Leitos', () => {
       prisma.administrador.deleteMany({}),
       prisma.usuario.deleteMany({}),
     ]);
-  });
 
+    // 1. Criar e autenticar o utilizador administrador para obter o token
+    const admin = await criarAdmin();
+    adminToken = admin.token;
+
+    // 2. Criar um quarto para poder associar leitos a ele nos testes
+    const responseQuarto = await request(app)
+      .post('/api/quartos')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        numeroQuarto: '201-TESTE',
+        categoria: 'MASCULINO',
+        capacidade: 1, // Capacidade de 1 para testar o limite
+      });
+    quartoId = responseQuarto.body.id;
+  });
 
   afterAll(async () => {
     await prisma.$disconnect();
@@ -40,13 +54,20 @@ describe('API de Leitos', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ identificacaoLeito: '201-A', quartoId });
     expect(response.status).toBe(201);
+    expect(response.body).toHaveProperty('id');
+    expect(response.body.quartoId).toBe(quartoId);
   });
 
   it('CT51: deve retornar 409 ao tentar criar leito em quarto com capacidade máxima atingida', async () => {
+    // O quarto foi criado com capacidade 1 e o teste anterior já criou um leito.
+    // Esta segunda tentativa deve falhar.
     const response = await request(app)
       .post('/api/leitos')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ identificacaoLeito: '201-B', quartoId });
     expect(response.status).toBe(409);
+    expect(response.body.error).toBe(
+      'A capacidade máxima do quarto já foi atingida.'
+    );
   });
 });

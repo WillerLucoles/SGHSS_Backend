@@ -43,14 +43,14 @@ describe('API de Quartos', () => {
   });
 
   it('CT47: ADMIN deve conseguir CRIAR um quarto', async () => {
-    const response = await request(app)
-      .post('/api/quartos')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ numeroQuarto: '101', categoria: 'PARTICULAR', capacidade: 2 });
-    expect(response.status).toBe(201);
-    expect(response.body).toHaveProperty('id');
+      const response = await request(app)
+        .post('/api/quartos')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ numeroQuarto: '101', categoria: 'UTI_GERAL', capacidade: 2 }); // MUDANÇA AQUI
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('id');
   });
-
+  
   it('CT48: PROFISSIONAL não deve conseguir criar um quarto', async () => {
     const response = await request(app)
       .post('/api/quartos')
