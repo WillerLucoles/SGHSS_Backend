@@ -29,7 +29,9 @@
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate dev --name init",
     "prisma:studio": "npx prisma studio",
-    "prisma": "npm run prisma:generate && npm run prisma:migrate"
+    "prisma": "npm run prisma:generate && npm run prisma:migrate",
+    "test:migrate": "dotenv -e .env.test -- npx prisma migrate dev",
+    "test:seed": "dotenv -e .env.test -- npx prisma db seed"
   },
   "repository": {
     "type": "git",
@@ -43,11 +45,18 @@
   },
   "homepage": "https://github.com/WillerLucoles/SGHSS_Backend#readme",
   "devDependencies": {
+    "dotenv-cli": "^10.0.0",
     "jest": "^30.0.5",
     "nodemon": "^3.1.10",
     "supertest": "^7.1.4"
   },
   "jest": {
-  "transform": {}
-}
+    "transform": {},
+    "setupFilesAfterEnv": [
+      "<rootDir>/src/__tests__/setup.js"
+    ],
+     "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ] 
+  }
 }
