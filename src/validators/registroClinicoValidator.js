@@ -9,7 +9,7 @@ const anexoSchema = z.object({
 
 // Schema principal para criar ou atualizar um registro clínico
 export const salvarRegistroSchema = z.object({
-  qqueixa: z.string().optional(),
+  queixa: z.string().min(10, "A queixa principal é obrigatória e precisa de detalhe."),
   exameFisico: z.string().optional(),
   hipotesesDiagnosticas: z.string().optional(),
   conduta: z.string().optional(),

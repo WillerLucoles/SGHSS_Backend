@@ -137,6 +137,10 @@ const consultaService = {
     if (!consulta) {
       throw new AppError(404, 'Consulta não encontrada ou você não tem permissão para editá-la.');
     }
+    console.log('--- DEBUG: DADOS RECEBIDOS PELO SERVIÇO ---');
+    console.log('Dados completos (dadosDoRegistro):', dadosDoRegistro);
+    console.log('Dados principais (após separar anexos):', dadosPrincipais);
+    console.log('-------------------------------------------');
 
     // 2. Usar uma transação para garantir que tudo aconteça de uma vez
     return prisma.$transaction(async (tx) => {
